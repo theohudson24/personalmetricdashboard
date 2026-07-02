@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserSettings {
+  id               String   @id @default(cuid())
+  profileId        String?  @unique
+  dailyCalorieGoal Int      @default(3000)
+  dailyProteinGoal Int      @default(180)
+  dailyCarbGoal    Int      @default(350)
+  dailyFatGoal     Int      @default(85)
+  dailyFiberGoal   Int      @default(30)
+  dailyWaterGoal   Int      @default(128)
+  dailyVitaminAGoal Float   @default(900)
+  dailyVitaminCGoal Float   @default(90)
+  dailyVitaminDGoal Float   @default(15)
+  dailyVitaminB12Goal Float @default(2.4)
+  dailyCalciumGoal  Float   @default(1000)
+  dailyIronGoal     Float   @default(8)
+  dailyMagnesiumGoal Float  @default(400)
+  dailyPotassiumGoal Float  @default(3400)
+  dailyZincGoal     Float   @default(11)
+  dailySodiumLimit  Float   @default(2300)
+  useRecommendedGoals Boolean @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  profile          Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Profile {
+  id               String            @id @default(cuid())
+  displayName      String
+  isDefault        Boolean           @default(false)
+  heightInches     Float?
+  weightLb         Float?
+  age              Int?
+  gender           String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  settings         UserSettings?
+  workouts         Workout[]
+  workoutTemplates WorkoutTemplate[]
+  dailyLogs        DailyLog[]
+  todoItems        TodoItem[]
+  bodyMeasurements BodyMeasurement[]
+  meals            Meal[]
+}
+
+model DailyLog {
+  id               String   @id @default(cuid())
+  profileId        String?
+  date             DateTime @unique
+  bodyWeight       Float?
+  sleepHours       Float?
+  restingHeartRate Int?
+  mood             Int?
+  energyLevel      Int?
+  sorenessLevel    Int?
+  stressLevel      Int?
+  waterIntake      Int?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  profile          Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model TodoItem {
+  id        String   @id @default(cuid())
+  profileId String?
+  date      DateTime
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([profileId])
+}
+
+model Workout {
+  id           String     @id @default(cuid())
+  profileId    String?
+  date         DateTime
+  name         String
+  duration     String?
+  durationMinutes Int?
+  muscleGroups String
+  notes        String?
+  source       String     @default("manual")
+  externalId   String?    @unique
+  exercises    Exercise[]
+  profile      Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([date])
+  @@index([profileId])
+  @@index([source])
+}
+
+model Exercise {
+  id          String        @id @default(cuid())
+  workoutId   String
+  name        String
+  muscleGroup String
+  notes       String?
+  workout     Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets        ExerciseSet[]
+
+  @@index([workoutId])
+  @@index([name])
+}
+
+model ExerciseSet {
+  id         String   @id @default(cuid())
+  exerciseId String
+  setNumber  Int
+  setType    String   @default("WORKING")
+  reps       Int
+  weight     Float
+  distance   Float    @default(0)
+  seconds    Float    @default(0)
+  rpe        Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+}
+
+model WorkoutTemplate {
+  id        String                    @id @default(cuid())
+  profileId String?
+  name      String
+  notes     String?
+  exercises WorkoutTemplateExercise[]
+  profile   Profile?                  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+model WorkoutTemplateExercise {
+  id          String               @id @default(cuid())
+  templateId  String
+  orderIndex  Int
+  name        String
+  muscleGroup String
+  notes       String?
+  template    WorkoutTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  sets        WorkoutTemplateSet[]
+
+  @@index([templateId])
+}
+
+model WorkoutTemplateSet {
+  id         String                  @id @default(cuid())
+  exerciseId String
+  setNumber  Int
+  setType    String                  @default("WORKING")
+  reps       Int
+  weight     Float
+  exercise   WorkoutTemplateExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+}
+
+model BodyMeasurement {
+  id         String   @id @default(cuid())
+  profileId  String?
+  date       DateTime
+  bodyWeight Float?
+  chest      Float?
+  arms       Float?
+  waist      Float?
+  legs       Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  profile    Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([profileId])
+}
+
+model Meal {
+  id        String     @id @default(cuid())
+  profileId String?
+  date      DateTime
+  mealType  MealType
+  mealName  String
+  time      String?
+  notes     String?
+  foodItems FoodItem[]
+  profile   Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([date])
+  @@index([profileId])
+}
+
+model FoodItem {
+  id          String   @id @default(cuid())
+  mealId      String
+  name        String
+  servingSize String?
+  calories    Int      @default(0)
+  protein     Float    @default(0)
+  carbs       Float    @default(0)
+  fat         Float    @default(0)
+  fiber       Float    @default(0)
+  sugar       Float    @default(0)
+  sodium      Float    @default(0)
+  vitaminA    Float    @default(0)
+  vitaminC    Float    @default(0)
+  vitaminD    Float    @default(0)
+  vitaminB12  Float    @default(0)
+  calcium     Float    @default(0)
+  iron        Float    @default(0)
+  magnesium   Float    @default(0)
+  potassium   Float    @default(0)
+  zinc        Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  PRE_WORKOUT
+  POST_WORKOUT
+}
+
+model ExerciseCatalog {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  muscleGroup  String
+  category     String   @default("Strength")
+  equipment    String?
+  aliases      String?
+  importedFrom String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([muscleGroup])
+  @@index([category])
+}
