@@ -1,8 +1,13 @@
+import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
+
+loadEnvConfig(process.cwd());
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const authUserId = process.env.TEST_AUTH_USER_ID;
+  if (!authUserId) throw new Error("Set TEST_AUTH_USER_ID to the authenticated Supabase user ID before normalizing.");
   const profiles = await prisma.profile.findMany({
     orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
   });
@@ -11,12 +16,12 @@ async function main() {
     profiles.find((profile) => profile.isDefault) ??
     profiles[0] ??
     (await prisma.profile.create({
-      data: { displayName: "Theo", isDefault: true },
+      data: { authUserId, displayName: "Test User", isDefault: false },
     }));
 
   await prisma.profile.update({
     where: { id: primary.id },
-    data: { displayName: "Theo", isDefault: true },
+    data: { authUserId, displayName: "Test User", isDefault: false },
   });
 
   const settingsRows = await prisma.userSettings.findMany({

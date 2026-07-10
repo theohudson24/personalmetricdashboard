@@ -12,8 +12,11 @@ export function ProgressBar({
   return (
     <div>
       {label ? <div className="mb-1 text-xs text-muted">{label}</div> : null}
-      <div className="h-2 overflow-hidden rounded-full bg-neutral-200">
-        <div className="h-full rounded-full bg-ink" style={{ width: `${percent}%` }} />
+      <div className="h-2.5 overflow-hidden rounded-full border border-line bg-black/25">
+        <div
+          className="h-full rounded-full bg-core shadow-[0_0_12px_rgba(77,183,167,0.22)]"
+          style={{ width: `${percent}%` }}
+        />
       </div>
     </div>
   );

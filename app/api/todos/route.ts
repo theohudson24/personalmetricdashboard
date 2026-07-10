@@ -1,23 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { startOfDay } from "@/lib/dates";
+import { getDefaultProfile } from "@/lib/profile";
 
 export async function GET() {
+  const profile = await getDefaultProfile();
   const todos = await prisma.todoItem.findMany({
+    where: { profileId: profile.id },
     orderBy: [{ date: "desc" }, { createdAt: "asc" }],
   });
   return NextResponse.json(todos);
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const todo = await prisma.todoItem.create({
-    data: {
-      date: startOfDay(body.date ? new Date(body.date) : new Date()),
-      title: body.title,
-      completed: Boolean(body.completed),
-    },
-  });
-
-  return NextResponse.json(todo);
+  void request;
+  return NextResponse.json({ error: "Use the validated application action." }, { status: 405 });
 }

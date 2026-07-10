@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDefaultProfile } from "@/lib/profile";
 
 export async function GET() {
+  const profile = await getDefaultProfile();
   const settings =
-    (await prisma.userSettings.findFirst()) ??
-    (await prisma.userSettings.create({ data: {} }));
+    (await prisma.userSettings.findUnique({ where: { profileId: profile.id } })) ??
+    (await prisma.userSettings.create({ data: { profileId: profile.id } }));
 
   return NextResponse.json(settings);
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const existing = await prisma.userSettings.findFirst();
-
-  const settings = existing
-    ? await prisma.userSettings.update({ where: { id: existing.id }, data: body })
-    : await prisma.userSettings.create({ data: body });
-
-  return NextResponse.json(settings);
+  void request;
+  return NextResponse.json({ error: "Use the validated application action." }, { status: 405 });
 }

@@ -11,14 +11,17 @@ import { prisma } from "@/lib/prisma";
 import {
   exerciseProgressSeries,
   muscleGroupVolumeEntries,
+  workoutComparisonEntries,
   workoutVolumeSeries,
   workoutsPerWeekSeries,
 } from "@/lib/workouts";
+import { getDefaultProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 export default async function GymPage() {
   await ensureDefaultData();
+  const profile = await getDefaultProfile();
 
   const today = startOfDay();
   const [
@@ -33,13 +36,14 @@ export default async function GymPage() {
     bodyMeasurements,
   ] = await Promise.all([
     prisma.workout.findMany({
+      where: { profileId: profile.id },
       include: { exercises: { include: { sets: true } } },
       orderBy: { date: "desc" },
       take: 20,
     }),
-    prisma.dailyLog.findUnique({ where: { date: today } }),
+    prisma.dailyLog.findUnique({ where: { profileId_date: { profileId: profile.id, date: today } } }),
     prisma.meal.findMany({
-      where: { date: today },
+      where: { date: today, profileId: profile.id },
       include: { foodItems: true },
     }),
     prisma.exerciseCatalog.findMany({
@@ -47,11 +51,13 @@ export default async function GymPage() {
       select: { name: true, muscleGroup: true, equipment: true },
     }),
     prisma.workout.findMany({
+      where: { profileId: profile.id },
       distinct: ["name"],
       select: { name: true },
       orderBy: { name: "asc" },
     }),
     prisma.workoutTemplate.findMany({
+      where: { profileId: profile.id },
       include: {
         exercises: {
           include: {
@@ -66,16 +72,17 @@ export default async function GymPage() {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.workout.findMany({
+      where: { profileId: profile.id },
       include: { exercises: { include: { sets: true } } },
       orderBy: { date: "asc" },
     }),
     prisma.dailyLog.findMany({
-      where: { bodyWeight: { not: null } },
+      where: { bodyWeight: { not: null }, profileId: profile.id },
       select: { date: true, bodyWeight: true },
       orderBy: { date: "asc" },
     }),
     prisma.bodyMeasurement.findMany({
-      where: { bodyWeight: { not: null } },
+      where: { bodyWeight: { not: null }, profileId: profile.id },
       select: { date: true, bodyWeight: true },
       orderBy: { date: "asc" },
     }),
@@ -100,8 +107,9 @@ export default async function GymPage() {
   return (
     <div>
       <PageHeader
-        title="Gym and lifting"
-        description="Log workouts, inspect training history, and monitor strength progression."
+        eyebrow="Training protocol"
+        title="Build strength with visible progression"
+        description="Log sessions, inspect muscle balance, and turn training history into targeted next moves."
       />
       <div className="grid gap-5">
         <WorkoutForm
@@ -115,6 +123,7 @@ export default async function GymPage() {
           weeklyWorkoutPoints={workoutsPerWeekSeries(progressWorkouts)}
           bodyWeightPoints={bodyWeightPoints}
           muscleGroupVolumeEntries={muscleGroupVolumeEntries(progressWorkouts)}
+          workoutComparisons={workoutComparisonEntries(progressWorkouts)}
         />
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
           <WorkoutHistoryList workouts={workouts} />

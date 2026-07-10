@@ -1,27 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 
 export async function getDefaultProfile() {
-  const existing = await prisma.profile.findFirst({
-    where: { isDefault: true },
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  const fallback = await prisma.profile.findFirst();
-
-  if (fallback) {
-    return prisma.profile.update({
-      where: { id: fallback.id },
-      data: { isDefault: true },
-    });
-  }
-
-  return prisma.profile.create({
-    data: {
-      displayName: "Theo",
-      isDefault: true,
-    },
+  const user = await requireUser();
+  return prisma.profile.upsert({
+    where: { authUserId: user.id },
+    update: {},
+    create: { authUserId: user.id, displayName: user.user_metadata?.full_name || user.email || "User", isDefault: false },
   });
 }

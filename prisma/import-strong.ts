@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
 import { inferExerciseDetails } from "../lib/exerciseCatalog";
+
+loadEnvConfig(process.cwd());
 
 const prisma = new PrismaClient();
 const filePath = process.argv[2] ?? join(process.cwd(), "imports", "strong_workouts.csv");
@@ -139,11 +142,9 @@ async function main() {
     throw new Error(`Strong CSV file not found: ${filePath}`);
   }
 
-  const profile =
-    (await prisma.profile.findFirst({ where: { isDefault: true } })) ??
-    (await prisma.profile.create({
-      data: { displayName: "Theo", isDefault: true },
-    }));
+  const authUserId = process.env.TEST_AUTH_USER_ID;
+  if (!authUserId) throw new Error("Set TEST_AUTH_USER_ID to the authenticated Supabase user ID before importing.");
+  const profile = await prisma.profile.upsert({ where: { authUserId }, update: {}, create: { authUserId, displayName: "Test User" } });
 
   await prisma.userSettings.upsert({
     where: { profileId: profile.id },
@@ -151,26 +152,6 @@ async function main() {
     create: { profileId: profile.id },
   });
 
-  await prisma.workout.updateMany({
-    where: { profileId: null },
-    data: { profileId: profile.id },
-  });
-  await prisma.dailyLog.updateMany({
-    where: { profileId: null },
-    data: { profileId: profile.id },
-  });
-  await prisma.todoItem.updateMany({
-    where: { profileId: null },
-    data: { profileId: profile.id },
-  });
-  await prisma.meal.updateMany({
-    where: { profileId: null },
-    data: { profileId: profile.id },
-  });
-  await prisma.bodyMeasurement.updateMany({
-    where: { profileId: null },
-    data: { profileId: profile.id },
-  });
 
   const rows = parseCsv(readFileSync(filePath, "utf8")).filter(
     (row) => row.Date && row["Workout Name"] && row["Exercise Name"],
@@ -204,7 +185,7 @@ async function main() {
   for (const [key, workoutRows] of grouped.entries()) {
     const [dateValue, workoutName] = key.split("::");
     const externalId = `strong:${dateValue}:${workoutName}`;
-    const existing = await prisma.workout.findUnique({ where: { externalId } });
+    const existing = await prisma.workout.findUnique({ where: { profileId_source_externalId: { profileId: profile.id, source: "strong", externalId } } });
 
     if (existing) {
       skipped += 1;

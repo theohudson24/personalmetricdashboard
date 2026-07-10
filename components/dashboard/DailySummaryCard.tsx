@@ -18,7 +18,13 @@ export function DailySummaryCard({
       />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {items.map((item) => (
-          <StatTile key={item.label} label={item.label} value={item.value} />
+          <StatTile
+            key={item.label}
+            label={item.label}
+            value={item.value}
+            helper={item.helper}
+            tone={item.missing ? "missing" : "default"}
+          />
         ))}
       </div>
       <div className="mt-4">

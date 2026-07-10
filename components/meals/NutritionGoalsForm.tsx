@@ -1,242 +1,125 @@
+"use client";
+
 import type { Profile, UserSettings } from "@prisma/client";
+import { useEffect, useRef, useState } from "react";
 import { updateSettings } from "@/app/actions";
-import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Input";
-import type { NutritionRecommendation } from "@/lib/recommendations";
+import { calculateNutritionRecommendation, type NutritionRecommendation } from "@/lib/recommendations";
 
-export function NutritionGoalsForm({
-  settings,
-  profile,
-  recommendation,
-  showProfileMetrics = false,
-}: {
-  settings: UserSettings;
-  profile?: Profile;
-  recommendation?: NutritionRecommendation | null;
-  showProfileMetrics?: boolean;
+type GoalKey = Exclude<keyof NutritionRecommendation, "bmi">;
+type GoalValues = Record<GoalKey, number>;
+type ProfileValues = { heightFeet: string; heightInchesRemainder: string; weightLb: string; age: string; gender: string };
+
+const goalFields: Array<{ key: GoalKey; label: string; step?: string }> = [
+  { key: "dailyCalorieGoal", label: "Calories" }, { key: "dailyProteinGoal", label: "Protein g" },
+  { key: "dailyCarbGoal", label: "Carbs g" }, { key: "dailyFatGoal", label: "Fat g" },
+  { key: "dailyFiberGoal", label: "Fiber g" }, { key: "dailyWaterGoal", label: "Water oz" },
+  { key: "dailyVitaminAGoal", label: "Vitamin A mcg RAE", step: "0.1" },
+  { key: "dailyVitaminCGoal", label: "Vitamin C mg", step: "0.1" },
+  { key: "dailyVitaminDGoal", label: "Vitamin D mcg", step: "0.1" },
+  { key: "dailyVitaminB12Goal", label: "Vitamin B12 mcg", step: "0.1" },
+  { key: "dailyCalciumGoal", label: "Calcium mg", step: "0.1" },
+  { key: "dailyIronGoal", label: "Iron mg", step: "0.1" },
+  { key: "dailyMagnesiumGoal", label: "Magnesium mg", step: "0.1" },
+  { key: "dailyPotassiumGoal", label: "Potassium mg", step: "0.1" },
+  { key: "dailyZincGoal", label: "Zinc mg", step: "0.1" },
+  { key: "dailySodiumLimit", label: "Sodium limit mg", step: "0.1" },
+];
+
+function goalsFrom(source: UserSettings | NutritionRecommendation): GoalValues {
+  return Object.fromEntries(goalFields.map(({ key }) => [key, source[key]])) as GoalValues;
+}
+
+export function NutritionGoalsForm({ settings, profile, recommendation, showProfileMetrics = false }: {
+  settings: UserSettings; profile?: Profile; recommendation?: NutritionRecommendation | null; showProfileMetrics?: boolean;
 }) {
-  const heightFeet = profile?.heightInches ? Math.floor(profile.heightInches / 12) : "";
-  const heightInchesRemainder = profile?.heightInches
-    ? Math.round(profile.heightInches % 12)
-    : "";
-  const displayedGoals =
-    settings.useRecommendedGoals && recommendation
-      ? recommendation
-      : {
-          dailyCalorieGoal: settings.dailyCalorieGoal,
-          dailyProteinGoal: settings.dailyProteinGoal,
-          dailyCarbGoal: settings.dailyCarbGoal,
-          dailyFatGoal: settings.dailyFatGoal,
-          dailyFiberGoal: settings.dailyFiberGoal,
-          dailyWaterGoal: settings.dailyWaterGoal,
-          dailyVitaminAGoal: settings.dailyVitaminAGoal,
-          dailyVitaminCGoal: settings.dailyVitaminCGoal,
-          dailyVitaminDGoal: settings.dailyVitaminDGoal,
-          dailyVitaminB12Goal: settings.dailyVitaminB12Goal,
-          dailyCalciumGoal: settings.dailyCalciumGoal,
-          dailyIronGoal: settings.dailyIronGoal,
-          dailyMagnesiumGoal: settings.dailyMagnesiumGoal,
-          dailyPotassiumGoal: settings.dailyPotassiumGoal,
-          dailyZincGoal: settings.dailyZincGoal,
-          dailySodiumLimit: settings.dailySodiumLimit,
-        };
+  const [profileValues, setProfileValues] = useState<ProfileValues>({
+    heightFeet: profile?.heightInches ? String(Math.floor(profile.heightInches / 12)) : "",
+    heightInchesRemainder: profile?.heightInches ? String(Math.round(profile.heightInches % 12)) : "",
+    weightLb: profile?.weightLb ? String(profile.weightLb) : "", age: profile?.age ? String(profile.age) : "", gender: profile?.gender ?? "",
+  });
+  const [estimate, setEstimate] = useState<NutritionRecommendation | null>(recommendation ?? null);
+  const [goals, setGoals] = useState<GoalValues>(() => goalsFrom(settings.useRecommendedGoals && recommendation ? recommendation : settings));
+  const [goalMode, setGoalMode] = useState<"recommended" | "custom">(settings.useRecommendedGoals ? "recommended" : "custom");
+  const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
+  const [hasChanges, setHasChanges] = useState(false);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (!initialized.current) { initialized.current = true; return; }
+    setSaveState("saving");
+    const timer = setTimeout(async () => {
+      const data = new FormData();
+      data.set("includeProfileMetrics", String(showProfileMetrics));
+      Object.entries(profileValues).forEach(([key, value]) => data.set(key, value));
+      Object.entries(goals).forEach(([key, value]) => data.set(key, String(value)));
+      data.set("goalMode", goalMode);
+      await updateSettings(data);
+      setSaveState("saved");
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [goalMode, goals, profileValues, showProfileMetrics]);
+
+  useEffect(() => {
+    if (!hasChanges) return;
+    const summary = () => `Confirm your saved settings before leaving:\nHeight: ${profileValues.heightFeet || "–"} ft ${profileValues.heightInchesRemainder || "–"} in\nWeight: ${profileValues.weightLb || "–"} lb\nAge: ${profileValues.age || "–"}\nGender: ${profileValues.gender || "–"}\nNutrition targets: ${goalMode === "recommended" ? "estimated from profile" : "manually customized"}`;
+    const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    const confirmNavigation = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement).closest("a");
+      if (anchor && !window.confirm(summary())) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", confirmNavigation, true);
+    return () => { window.removeEventListener("beforeunload", beforeUnload); document.removeEventListener("click", confirmNavigation, true); };
+  }, [goalMode, hasChanges, profileValues]);
+
+  function updateProfile(key: keyof ProfileValues, value: string) {
+    const next = { ...profileValues, [key]: value };
+    setProfileValues(next);
+    setHasChanges(true);
+    const calculated = calculateNutritionRecommendation({
+      heightInches: (Number(next.heightFeet) || 0) * 12 + (Number(next.heightInchesRemainder) || 0),
+      weightLb: Number(next.weightLb) || null, age: Number(next.age) || null, gender: next.gender || null,
+    });
+    setEstimate(calculated);
+    if (calculated) { setGoals(goalsFrom(calculated)); setGoalMode("recommended"); }
+  }
+
+  function updateGoal(key: GoalKey, value: string) {
+    setGoals((current) => ({ ...current, [key]: Number(value) || 0 }));
+    setGoalMode("custom");
+    setHasChanges(true);
+  }
+
+  const macroFields = goalFields.slice(0, 6);
+  const microFields = goalFields.slice(6);
 
   return (
     <Card>
-      <CardHeader
-        title="Daily nutrition goals"
-        description="Use estimated targets from your body metrics or enter custom goals."
-      />
-      <form action={updateSettings} className="space-y-4">
-        {showProfileMetrics ? (
-          <>
-            <input type="hidden" name="includeProfileMetrics" value="true" />
-            <div className="rounded-md border border-line bg-neutral-50 p-3">
-              <h3 className="text-sm font-semibold">Profile metrics</h3>
-              <p className="mt-1 text-sm text-muted">
-                Height and weight are used to estimate default nutrition targets.
-              </p>
-              {!recommendation ? (
-                <p className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-neutral-700">
-                Add your height, weight, age, and gender to generate recommended daily goals.
-              </p>
-            ) : null}
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <Field label="Height ft">
-                  <Input
-                    name="heightFeet"
-                    type="number"
-                    min="0"
-                    defaultValue={heightFeet}
-                  />
-                </Field>
-                <Field label="Height in">
-                  <Input
-                    name="heightInchesRemainder"
-                    type="number"
-                    min="0"
-                    max="11"
-                    defaultValue={heightInchesRemainder}
-                  />
-                </Field>
-                <Field label="Weight lb">
-                  <Input
-                    name="weightLb"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    defaultValue={profile?.weightLb ?? ""}
-                  />
-                </Field>
-                <Field label="Age">
-                  <Input
-                    name="age"
-                    type="number"
-                    min="0"
-                    defaultValue={profile?.age ?? ""}
-                  />
-                </Field>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-neutral-700">
-                    Gender
-                  </span>
-                  <select
-                    name="gender"
-                    defaultValue={profile?.gender ?? ""}
-                    className="min-h-11 w-full rounded-md border border-line bg-white px-3 text-sm text-ink transition focus:border-ink"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </label>
-              </div>
+      <CardHeader title="Body profile and nutrition targets" description="Profile changes replace every target with a fresh estimate. Editing any target afterwards saves it as a custom value." />
+      <div className="mb-4 flex justify-end text-xs text-muted" aria-live="polite">{saveState === "saving" ? "Saving changes…" : `All changes saved · ${goalMode === "recommended" ? "Estimated targets" : "Custom targets"}`}</div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {showProfileMetrics ? <>
+          <div className="rounded-md border border-line bg-black/15 p-3">
+            <h3 className="text-sm font-semibold">Profile metrics</h3>
+            <p className="mt-1 text-sm text-muted">Completing these fields recalculates and saves all nutrition targets.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <Field label="Height ft"><Input type="number" min="0" value={profileValues.heightFeet} onChange={(e) => updateProfile("heightFeet", e.target.value)} /></Field>
+              <Field label="Height in"><Input type="number" min="0" max="11" value={profileValues.heightInchesRemainder} onChange={(e) => updateProfile("heightInchesRemainder", e.target.value)} /></Field>
+              <Field label="Weight lb"><Input type="number" min="0" step="0.1" value={profileValues.weightLb} onChange={(e) => updateProfile("weightLb", e.target.value)} /></Field>
+              <Field label="Age"><Input type="number" min="0" value={profileValues.age} onChange={(e) => updateProfile("age", e.target.value)} /></Field>
+              <label className="block"><span className="mb-1.5 block text-sm font-medium text-ink">Gender</span><select value={profileValues.gender} onChange={(e) => updateProfile("gender", e.target.value)} className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink"><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
             </div>
-
-            {recommendation ? (
-              <div className="rounded-md border border-line bg-neutral-50 p-3">
-                <h3 className="text-sm font-semibold">Recommended estimate</h3>
-                <p className="mt-1 text-sm text-muted">
-                  Based on height, weight, BMI {recommendation.bmi}, and common fitness nutrition heuristics.
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                  <span>Calories: {recommendation.dailyCalorieGoal}</span>
-                  <span>Protein: {recommendation.dailyProteinGoal}g</span>
-                  <span>Carbs: {recommendation.dailyCarbGoal}g</span>
-                  <span>Fat: {recommendation.dailyFatGoal}g</span>
-                  <span>Fiber: {recommendation.dailyFiberGoal}g</span>
-                  <span>Water: {recommendation.dailyWaterGoal} oz</span>
-                  <span>Vitamin A: {recommendation.dailyVitaminAGoal} mcg</span>
-                  <span>Vitamin C: {recommendation.dailyVitaminCGoal} mg</span>
-                  <span>Vitamin D: {recommendation.dailyVitaminDGoal} mcg</span>
-                  <span>Vitamin B12: {recommendation.dailyVitaminB12Goal} mcg</span>
-                  <span>Calcium: {recommendation.dailyCalciumGoal} mg</span>
-                  <span>Iron: {recommendation.dailyIronGoal} mg</span>
-                  <span>Magnesium: {recommendation.dailyMagnesiumGoal} mg</span>
-                  <span>Potassium: {recommendation.dailyPotassiumGoal} mg</span>
-                  <span>Zinc: {recommendation.dailyZincGoal} mg</span>
-                  <span>Sodium limit: {recommendation.dailySodiumLimit} mg</span>
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <Field label="Calories">
-            <Input
-              name="dailyCalorieGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyCalorieGoal}
-            />
-          </Field>
-          <Field label="Protein g">
-            <Input
-              name="dailyProteinGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyProteinGoal}
-            />
-          </Field>
-          <Field label="Carbs g">
-            <Input
-              name="dailyCarbGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyCarbGoal}
-            />
-          </Field>
-          <Field label="Fat g">
-            <Input
-              name="dailyFatGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyFatGoal}
-            />
-          </Field>
-          <Field label="Fiber g">
-            <Input
-              name="dailyFiberGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyFiberGoal}
-            />
-          </Field>
-          <Field label="Water oz">
-            <Input
-              name="dailyWaterGoal"
-              type="number"
-              defaultValue={displayedGoals.dailyWaterGoal}
-            />
-          </Field>
-        </div>
-        <div>
-          <h3 className="mb-3 text-sm font-semibold">Daily micronutrient goals</h3>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <Field label="Vitamin A mcg RAE">
-              <Input name="dailyVitaminAGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyVitaminAGoal} />
-            </Field>
-            <Field label="Vitamin C mg">
-              <Input name="dailyVitaminCGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyVitaminCGoal} />
-            </Field>
-            <Field label="Vitamin D mcg">
-              <Input name="dailyVitaminDGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyVitaminDGoal} />
-            </Field>
-            <Field label="Vitamin B12 mcg">
-              <Input name="dailyVitaminB12Goal" type="number" step="0.1" defaultValue={displayedGoals.dailyVitaminB12Goal} />
-            </Field>
-            <Field label="Calcium mg">
-              <Input name="dailyCalciumGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyCalciumGoal} />
-            </Field>
-            <Field label="Iron mg">
-              <Input name="dailyIronGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyIronGoal} />
-            </Field>
-            <Field label="Magnesium mg">
-              <Input name="dailyMagnesiumGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyMagnesiumGoal} />
-            </Field>
-            <Field label="Potassium mg">
-              <Input name="dailyPotassiumGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyPotassiumGoal} />
-            </Field>
-            <Field label="Zinc mg">
-              <Input name="dailyZincGoal" type="number" step="0.1" defaultValue={displayedGoals.dailyZincGoal} />
-            </Field>
-            <Field label="Sodium limit mg">
-              <Input name="dailySodiumLimit" type="number" step="0.1" defaultValue={displayedGoals.dailySodiumLimit} />
-            </Field>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {showProfileMetrics ? (
-            <Button name="goalMode" value="recommended">
-              Save recommended estimate
-            </Button>
-          ) : null}
-          <Button
-            name="goalMode"
-            value="custom"
-            variant={showProfileMetrics ? "secondary" : "primary"}
-          >
-            Save custom goals
-          </Button>
-        </div>
-      </form>
+          <div className="rounded-md border border-line bg-black/15 p-3">
+            <h3 className="text-sm font-semibold">Recommended estimate</h3>
+            {estimate ? <><p className="mt-1 text-sm text-muted">Live estimate based on BMI {estimate.bmi}. These values are already populated below.</p><div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{goalFields.map(({ key, label }) => <span key={key}>{label}: {estimate[key]}</span>)}</div></> : <p className="mt-3 text-sm text-muted">Enter height, weight, age, and gender to generate estimates.</p>}
+          </div>
+        </> : null}
+        <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">{macroFields.map(({ key, label, step }) => <Field key={key} label={label}><Input type="number" step={step} value={goals[key]} onChange={(e) => updateGoal(key, e.target.value)} /></Field>)}</div>
+        <div className="content-start"><h3 className="mb-3 text-sm font-semibold">Daily micronutrient goals</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{microFields.map(({ key, label, step }) => <Field key={key} label={label}><Input type="number" step={step} value={goals[key]} onChange={(e) => updateGoal(key, e.target.value)} /></Field>)}</div></div>
+      </div>
     </Card>
   );
 }

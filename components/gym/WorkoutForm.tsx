@@ -177,7 +177,7 @@ export function WorkoutForm({
                   key={template.id}
                   type="button"
                   onClick={() => startFromTemplate(template)}
-                  className="rounded-md border border-line bg-neutral-50 p-3 text-left transition hover:border-neutral-300 hover:bg-white"
+                  className="rounded-md border border-line bg-black/15 p-3 text-left transition hover:border-core/40 hover:bg-white/[0.06]"
                 >
                   <span className="block text-sm font-medium">{template.name}</span>
                   <span className="mt-1 block text-xs text-muted">
@@ -238,13 +238,13 @@ export function WorkoutForm({
 
         <div className="space-y-4">
           {exercises.map((exercise, exerciseIndex) => (
-            <div key={exercise.id} className="rounded-md border border-line p-3">
+            <div key={exercise.id} className="rounded-md border border-line bg-black/10 p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">Exercise {exerciseIndex + 1}</p>
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-9 w-9 p-0 text-neutral-500 hover:border-red-200 hover:bg-red-100 hover:text-red-700 active:bg-red-200"
+                  className="h-9 w-9 p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
                   onClick={() => removeExercise(exercise.id)}
                   title="Remove exercise"
                 >
@@ -300,7 +300,7 @@ export function WorkoutForm({
                       name="setType"
                       defaultValue={set.setType}
                       aria-label={`Set ${setIndex + 1} type`}
-                      className="min-h-11 w-full rounded-md border border-line bg-white px-3 text-sm text-ink transition focus:border-ink"
+                      className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
                     >
                       <option value="WORKING">Working</option>
                       <option value="DROP_SET">Drop set</option>
@@ -310,7 +310,7 @@ export function WorkoutForm({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-11 w-11 p-0 text-neutral-500 hover:border-red-200 hover:bg-red-100 hover:text-red-700 active:bg-red-200"
+                      className="h-11 w-11 p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
                       onClick={() => removeSet(exercise.id, set.id)}
                       title="Remove set"
                     >
@@ -327,7 +327,7 @@ export function WorkoutForm({
           ))}
         </div>
 
-        <div className="rounded-md border border-line bg-neutral-50 p-3">
+        <div className="rounded-md border border-line bg-black/15 p-3">
           <label className="flex items-center gap-2 text-sm font-medium">
             <input name="saveAsTemplate" type="checkbox" className="h-4 w-4" />
             Save this workout as a template

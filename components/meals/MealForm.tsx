@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { createMeal } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
@@ -77,6 +77,7 @@ function updatesForWeight(item: FoodDraft, grams: number): Partial<FoodDraft> {
 
 export function MealForm() {
   const [items, setItems] = useState<FoodDraft[]>([newFoodDraft()]);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
 
   function updateItem(id: string, updates: Partial<FoodDraft>) {
     setItems((current) =>
@@ -151,13 +152,17 @@ export function MealForm() {
 
         <div className="space-y-4">
           {items.map((item, index) => (
-            <div key={item.id} className="rounded-md border border-line p-3">
+            <div key={item.id} className="rounded-md border border-line bg-black/10 p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">Ingredient #{index + 1}</p>
+                <div className="flex gap-1">
+                <Button type="button" variant="ghost" className="h-10 w-10 p-0" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"}>
+                  {expandedIds.has(item.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-12 w-12 border-line bg-neutral-50 p-0 text-neutral-800 hover:border-red-300 hover:bg-red-100 hover:text-red-800 active:bg-red-200"
+                  className="h-12 w-12 border-line bg-black/15 p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
                   onClick={() =>
                     setItems((current) =>
                       current.length === 1
@@ -169,9 +174,11 @@ export function MealForm() {
                 >
                   <Trash2 size={26} strokeWidth={2.7} />
                 </Button>
+                </div>
               </div>
 
-              <div className="mb-4 rounded-md border border-line bg-neutral-50 p-3">
+              {expandedIds.has(item.id) ? <>
+              <div className="mb-4 rounded-md border border-line bg-black/15 p-3">
                 <div className="grid gap-3 sm:grid-cols-[1fr_9rem_auto]">
                   <Field label="Ingredient">
                     <Input
@@ -218,7 +225,7 @@ export function MealForm() {
                         key={result.fdcId}
                         type="button"
                         onClick={() => applyFoodResult(item, result)}
-                        className="rounded-md border border-line bg-white p-3 text-left transition hover:border-neutral-300 hover:bg-neutral-100"
+                        className="rounded-md border border-line bg-black/15 p-3 text-left transition hover:border-core/40 hover:bg-white/[0.06]"
                       >
                         <span className="block text-sm font-medium">{result.description}</span>
                         <span className="mt-1 block text-xs text-muted">
@@ -271,6 +278,15 @@ export function MealForm() {
                   </Field>
                 ))}
               </div>
+              </> : (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+                  <span>{item.foodName || "Ingredient details not entered"} · {item.servingSize || `${item.grams} g`}</span>
+                  <span>{Math.round(item.calories)} kcal · {Math.round(item.protein)}g protein</span>
+                  <input type="hidden" name="foodName" value={item.foodName} />
+                  <input type="hidden" name="servingSize" value={item.servingSize || `${item.grams} g`} />
+                  {Object.keys(emptyNutrition).map((name) => <input key={name} type="hidden" name={name} value={item[name as keyof FoodNutrition]} />)}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -279,12 +295,20 @@ export function MealForm() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setItems((current) => [...current, newFoodDraft()])}
+            onClick={() => {
+              const next = newFoodDraft();
+              setExpandedIds(new Set([next.id]));
+              setItems((current) => [...current, next]);
+            }}
           >
             <Plus size={16} />
             <span className="ml-2">Add food</span>
           </Button>
           <Button>Save meal</Button>
+          <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
+            <input type="checkbox" name="saveAsTemplate" className="accent-[#4db7a7]" />
+            Save this meal as a reusable template
+          </label>
         </div>
       </form>
     </Card>

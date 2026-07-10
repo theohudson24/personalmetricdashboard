@@ -23,7 +23,7 @@ export function TodoList({ todos, date }: { todos: Todo[]; date: string }) {
           <input type="hidden" name="date" value={date} />
           <Button
             variant="ghost"
-            className="h-12 w-12 border-line bg-neutral-50 p-0 text-neutral-800 hover:border-yellow-300 hover:bg-yellow-100 hover:text-yellow-900 active:bg-yellow-200"
+            className="h-12 w-12 border-line bg-black/15 p-0 text-muted hover:border-pulse/50 hover:bg-pulse/15 hover:text-pulse active:bg-pulse/20"
             title="Reset tasks"
           >
             <RefreshCcw size={26} strokeWidth={2.7} />
@@ -38,14 +38,14 @@ export function TodoList({ todos, date }: { todos: Todo[]; date: string }) {
           todos.map((todo) => (
             <div
               key={todo.id}
-              className="flex min-h-12 items-center gap-3 rounded-md border border-line px-3"
+              className="flex min-h-12 items-center gap-3 rounded-md border border-line bg-black/10 px-3"
             >
               <form action={toggleTodo}>
                 <input type="hidden" name="id" value={todo.id} />
                 <input type="hidden" name="completed" value={String(todo.completed)} />
                 <button
                   className={`h-5 w-5 rounded border ${
-                    todo.completed ? "border-ink bg-ink" : "border-neutral-400 bg-white"
+                    todo.completed ? "border-growth bg-growth" : "border-muted bg-black/20"
                   }`}
                   title={todo.completed ? "Mark incomplete" : "Mark complete"}
                 />
@@ -61,7 +61,7 @@ export function TodoList({ todos, date }: { todos: Todo[]; date: string }) {
                 <input type="hidden" name="id" value={todo.id} />
                 <Button
                   variant="ghost"
-                  className="h-12 w-12 border-line bg-neutral-50 p-0 text-neutral-800 hover:border-red-300 hover:bg-red-100 hover:text-red-800 active:bg-red-200"
+                  className="h-12 w-12 border-line bg-black/15 p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
                   title="Delete task"
                 >
                   <Trash2 size={26} strokeWidth={2.7} />

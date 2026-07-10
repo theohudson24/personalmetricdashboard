@@ -1,5 +1,8 @@
+import { loadEnvConfig } from "@next/env";
 import { PrismaClient } from "@prisma/client";
 import { exerciseCatalogSeeds } from "../lib/exerciseCatalog";
+
+loadEnvConfig(process.cwd());
 
 const prisma = new PrismaClient();
 
@@ -7,13 +10,11 @@ const today = new Date();
 today.setHours(0, 0, 0, 0);
 
 async function main() {
-  const profile =
-    (await prisma.profile.findFirst({ where: { isDefault: true } })) ??
-    (await prisma.profile.create({
-      data: { displayName: "Theo", isDefault: true },
-    }));
+  const authUserId = process.env.TEST_AUTH_USER_ID;
+  if (!authUserId) throw new Error("Set TEST_AUTH_USER_ID to the authenticated Supabase user ID before seeding.");
+  const profile = await prisma.profile.upsert({ where: { authUserId }, update: {}, create: { authUserId, displayName: "Test User" } });
 
-  const settings = await prisma.userSettings.findFirst();
+  const settings = await prisma.userSettings.findUnique({ where: { profileId: profile.id } });
 
   if (!settings) {
     await prisma.userSettings.create({
@@ -29,18 +30,18 @@ async function main() {
     });
   }
 
-  const existingTodos = await prisma.todoItem.count({ where: { date: today } });
+  const existingTodos = await prisma.todoItem.count({ where: { date: today, profileId: profile.id } });
 
   if (existingTodos === 0) {
     await prisma.todoItem.createMany({
       data: [
-        "Drink water",
-        "Take morning supplements",
-        "Complete workout",
-        "Hit protein goal",
-        "Log meals",
-        "Stretch or mobility work",
-        "Complete nighttime routine",
+        "Log morning body weight",
+        "Log sleep hours",
+        "Score energy, soreness, stress, and mood",
+        "Log first water intake",
+        "Plan protein and calories for the day",
+        "Choose today's training focus",
+        "Review yesterday's nutrition and workout notes",
       ].map((title) => ({ date: today, title, profileId: profile.id })),
     });
   }

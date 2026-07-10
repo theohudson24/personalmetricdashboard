@@ -30,7 +30,7 @@ export function ProgressPreview({
         description="A quick look at recent training and nutrition momentum."
       />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <div className="rounded-md border border-line bg-neutral-50 p-3">
+        <div className="rounded-md border border-line bg-black/15 p-3">
           <p className="text-xs text-muted">Weight trend</p>
           <p className={`mt-1 text-xl font-semibold ${trendClass}`}>{weightTrend}</p>
         </div>

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -12,8 +12,12 @@
 
 body {
   margin: 0;
-  background: #f7f7f7;
-  color: #111111;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(77, 183, 167, 0.16), transparent 30rem),
+    radial-gradient(circle at 82% 0%, rgba(224, 154, 85, 0.11), transparent 28rem),
+    linear-gradient(135deg, #0a0f0c 0%, #101713 48%, #141b17 100%);
+  color: #edf4ea;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -37,10 +41,104 @@ a,
 input,
 select,
 textarea {
-  outline-color: #111111;
+  outline-color: #26685f;
 }
 
 ::selection {
-  background: #111111;
+  background: #4db7a7;
   color: #ffffff;
 }
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background-image:
+    linear-gradient(rgba(237, 244, 234, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 244, 234, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background:
+    radial-gradient(circle at 14% 10%, rgba(38, 104, 95, 0.1), transparent 30rem),
+    radial-gradient(circle at 82% 0%, rgba(177, 105, 38, 0.08), transparent 28rem),
+    linear-gradient(135deg, #f7faf7 0%, #eef4ef 48%, #e7efe9 100%);
+  color: #17221b;
+}
+
+html.light body::before {
+  background-image:
+    linear-gradient(rgba(23, 34, 27, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 34, 27, 0.045) 1px, transparent 1px);
+}
+
+/* Light mode is intentionally defined as a complete surface palette. Most of the
+   application uses translucent utility classes that otherwise assume a dark canvas. */
+html.light .bg-paper { background-color: #fbfdfb !important; }
+html.light .text-ink { color: #17221b !important; }
+html.light .text-muted { color: #52645a !important; }
+html.light .text-core { color: #17675d !important; }
+html.light .text-growth { color: #4d751d !important; }
+html.light .text-focus { color: #315f9d !important; }
+html.light .text-pulse { color: #96551f !important; }
+html.light .text-ember { color: #a63737 !important; }
+html.light [class*="text-white"] { color: #33473b !important; }
+html.light [class*="fill-white"] { fill: #52645a !important; }
+html.light [class*="fill-neutral"] { fill: #5d6e64 !important; }
+
+html.light .border-line,
+html.light [class*="border-white"] { border-color: #c5d2c8 !important; }
+
+html.light [class*="bg-white/"],
+html.light [class*="bg-black/"] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html.light [class*="bg-[#0b100d]"],
+html.light [class*="bg-[#111814]"] {
+  background-color: #f8fbf8 !important;
+}
+
+html.light [class*="from-[#0b100d]"] {
+  --tw-gradient-from: #f8fbf8 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(248, 251, 248, 0) var(--tw-gradient-to-position) !important;
+}
+
+html.light [class*="to-[#17221c]"] {
+  --tw-gradient-to: #e5eee7 var(--tw-gradient-to-position) !important;
+}
+
+html.light section[class*="shadow-soft"],
+html.light [class*="shadow-glow"] {
+  box-shadow: 0 14px 36px rgba(38, 68, 48, 0.1) !important;
+}
+
+html.light input,
+html.light select,
+html.light textarea {
+  border-color: #b8c8bc !important;
+  background-color: #ffffff !important;
+  color: #17221b !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder { color: #718078 !important; }
+html.light option { background: #ffffff; color: #17221b; }
+
+html.light .bg-core { background-color: #318f82 !important; }
+html.light .bg-growth { background-color: #739e3d !important; }
+html.light .bg-pulse { background-color: #c27a35 !important; }
+html.light .bg-ember { background-color: #c54c4c !important; }
+html.light .border-core { border-color: #267f73 !important; }
+html.light button.bg-core,
+html.light a.bg-core { color: #ffffff !important; }
+
+html.light svg { color: #33473b; }

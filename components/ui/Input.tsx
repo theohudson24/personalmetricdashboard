@@ -9,7 +9,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-neutral-700">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>
       {children}
     </label>
   );
@@ -18,7 +18,7 @@ export function Field({
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className="w-full rounded-md border border-line bg-white px-3 text-sm text-ink transition placeholder:text-neutral-400 hover:border-neutral-300 focus:border-ink"
+      className="w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition placeholder:text-muted/70 hover:border-core/40 focus:border-core"
       {...props}
     />
   );
@@ -27,7 +27,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className="w-full rounded-md border border-line bg-white px-3 text-sm text-ink transition focus:border-ink"
+      className="w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
       {...props}
     />
   );
@@ -36,7 +36,7 @@ export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className="min-h-24 w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink transition placeholder:text-neutral-400 focus:border-ink"
+      className="min-h-24 w-full rounded-md border border-line bg-black/20 px-3 py-2 text-sm text-ink transition placeholder:text-muted/70 focus:border-core"
       {...props}
     />
   );
