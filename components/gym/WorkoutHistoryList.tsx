@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatDisplayDate } from "@/lib/dates";
-import { workoutVolume, type WorkoutWithExercises } from "@/lib/workouts";
+import { workoutDisplayName, workoutVolume, type WorkoutWithExercises } from "@/lib/workouts";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -49,7 +49,7 @@ export function WorkoutHistoryList({
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-medium">{workout.name}</p>
+                      <p className="font-medium">{workoutDisplayName(workout)}</p>
                       <p className="text-sm text-muted">
                         {formatDisplayDate(workout.date)} / {workout.muscleGroups}
                       </p>

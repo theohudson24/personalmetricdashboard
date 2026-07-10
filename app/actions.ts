@@ -15,6 +15,16 @@ import { inferExerciseDetails } from "@/lib/exerciseCatalog";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
 
 const defaultTodos = [
+  "Log morning body weight",
+  "Log sleep hours",
+  "Score energy, soreness, stress, and mood",
+  "Log first water intake",
+  "Plan protein and calories for the day",
+  "Choose today's training focus",
+  "Review yesterday's nutrition and workout notes",
+];
+
+const legacyDefaultTodos = [
   "Drink water",
   "Take morning supplements",
   "Complete workout",
@@ -33,24 +43,42 @@ function revalidateApp() {
 
 export async function ensureDefaultData() {
   const profile = await getDefaultProfile();
-  const settings = await prisma.userSettings.findFirst();
+  const settings = await prisma.userSettings.findUnique({ where: { profileId: profile.id } });
 
   if (!settings) {
     await prisma.userSettings.create({ data: { profileId: profile.id } });
-  } else if (!settings.profileId) {
-    await prisma.userSettings.update({
-      where: { id: settings.id },
-      data: { profileId: profile.id },
-    });
   }
 
   const today = startOfDay();
-  const todoCount = await prisma.todoItem.count({ where: { date: today } });
+  const todoCount = await prisma.todoItem.count({ where: { date: today, profileId: profile.id } });
 
   if (todoCount === 0) {
     await prisma.todoItem.createMany({
       data: defaultTodos.map((title) => ({ date: today, title, profileId: profile.id })),
+      skipDuplicates: true,
     });
+  } else {
+    await prisma.todoItem.deleteMany({
+      where: {
+        date: today,
+        profileId: profile.id,
+        title: { in: legacyDefaultTodos },
+      },
+    });
+
+    const existingTodos = await prisma.todoItem.findMany({
+      where: { date: today, profileId: profile.id },
+      select: { title: true },
+    });
+    const existingTitles = new Set(existingTodos.map((todo) => todo.title));
+    const missingDefaults = defaultTodos.filter((title) => !existingTitles.has(title));
+
+    if (missingDefaults.length > 0) {
+      await prisma.todoItem.createMany({
+        data: missingDefaults.map((title) => ({ date: today, title, profileId: profile.id })),
+        skipDuplicates: true,
+      });
+    }
   }
 }
 
@@ -59,7 +87,7 @@ export async function updateDailyLog(formData: FormData) {
   const date = parseDateInput(formData.get("date"));
 
   await prisma.dailyLog.upsert({
-    where: { date },
+    where: { profileId_date: { profileId: profile.id, date } },
     create: {
       profileId: profile.id,
       date,
@@ -109,6 +137,7 @@ export async function addTodo(formData: FormData) {
 }
 
 export async function toggleTodo(formData: FormData) {
+  const profile = await getDefaultProfile();
   const id = stringValue(formData, "id");
   const completed = formData.get("completed") === "true";
 
@@ -116,8 +145,8 @@ export async function toggleTodo(formData: FormData) {
     return;
   }
 
-  await prisma.todoItem.update({
-    where: { id },
+  await prisma.todoItem.updateMany({
+    where: { id, profileId: profile.id },
     data: { completed: !completed },
   });
 
@@ -125,13 +154,14 @@ export async function toggleTodo(formData: FormData) {
 }
 
 export async function deleteTodo(formData: FormData) {
+  const profile = await getDefaultProfile();
   const id = stringValue(formData, "id");
 
   if (!id) {
     return;
   }
 
-  await prisma.todoItem.delete({ where: { id } });
+  await prisma.todoItem.deleteMany({ where: { id, profileId: profile.id } });
   revalidatePath("/");
 }
 
@@ -139,9 +169,10 @@ export async function resetTodos(formData: FormData) {
   const profile = await getDefaultProfile();
   const date = parseDateInput(formData.get("date"));
 
-  await prisma.todoItem.deleteMany({ where: { date } });
+  await prisma.todoItem.deleteMany({ where: { date, profileId: profile.id } });
   await prisma.todoItem.createMany({
     data: defaultTodos.map((title) => ({ date, title, profileId: profile.id })),
+    skipDuplicates: true,
   });
 
   revalidatePath("/");
@@ -327,12 +358,78 @@ export async function createMeal(formData: FormData) {
     },
   });
 
+  if (formData.get("saveAsTemplate") === "on") {
+    await prisma.mealTemplate.deleteMany({ where: { profileId: profile.id, name: mealName } });
+    await prisma.mealTemplate.create({
+      data: {
+        profileId: profile.id,
+        name: mealName,
+        mealType: stringValue(formData, "mealType", "BREAKFAST") as MealType,
+        notes: optionalString(formData, "notes"),
+        foodItems: { create: foodItems },
+      },
+    });
+  }
+
+  revalidateApp();
+}
+
+export async function reuseMealTemplate(formData: FormData) {
+  const profile = await getDefaultProfile();
+  const id = stringValue(formData, "id");
+  if (!id) return;
+  const template = await prisma.mealTemplate.findFirst({ where: { id, profileId: profile.id }, include: { foodItems: true } });
+  if (!template) return;
+  await prisma.meal.create({
+    data: {
+      profileId: profile.id,
+      date: startOfDay(),
+      mealType: template.mealType,
+      mealName: template.name,
+      notes: template.notes,
+      foodItems: { create: template.foodItems.map((item) => ({
+        name: item.name, servingSize: item.servingSize, calories: item.calories,
+        protein: item.protein, carbs: item.carbs, fat: item.fat, fiber: item.fiber,
+        sugar: item.sugar, sodium: item.sodium, vitaminA: item.vitaminA,
+        vitaminC: item.vitaminC, vitaminD: item.vitaminD, vitaminB12: item.vitaminB12,
+        calcium: item.calcium, iron: item.iron, magnesium: item.magnesium,
+        potassium: item.potassium, zinc: item.zinc,
+      })) },
+    },
+  });
+  revalidatePath("/meals");
+}
+
+export async function deleteMeal(formData: FormData) {
+  const profile = await getDefaultProfile();
+  const id = stringValue(formData, "id");
+  if (!id) return;
+  await prisma.meal.deleteMany({ where: { id, profileId: profile.id } });
+  revalidateApp();
+}
+
+export async function updateMeal(formData: FormData) {
+  const profile = await getDefaultProfile();
+  const id = stringValue(formData, "id");
+  if (!id) return;
+  const names = formData.getAll("foodName").map(String);
+  const servings = formData.getAll("servingSize").map(String);
+  const calories = formData.getAll("calories").map(Number);
+  const protein = formData.getAll("protein").map(Number);
+  const foodItems = names.map((name, index) => ({ name: name.trim(), servingSize: servings[index] || null, calories: calories[index] || 0, protein: protein[index] || 0 })).filter((item) => item.name);
+  const ownedMeal = await prisma.meal.findFirst({ where: { id, profileId: profile.id }, select: { id: true } });
+  if (!ownedMeal) return;
+  await prisma.$transaction([
+    prisma.foodItem.deleteMany({ where: { mealId: id } }),
+    prisma.meal.updateMany({ where: { id, profileId: profile.id }, data: { mealName: stringValue(formData, "mealName", "Meal"), notes: optionalString(formData, "notes") } }),
+    prisma.foodItem.createMany({ data: foodItems.map((item) => ({ ...item, mealId: id })) }),
+  ]);
   revalidateApp();
 }
 
 export async function updateSettings(formData: FormData) {
   const profile = await getDefaultProfile();
-  const existing = await prisma.userSettings.findFirst();
+  const existing = await prisma.userSettings.findUnique({ where: { profileId: profile.id } });
   const includeProfileMetrics = formData.get("includeProfileMetrics") === "true";
   const heightFeet = optionalNumber(formData, "heightFeet");
   const heightInchesRemainder = optionalNumber(formData, "heightInchesRemainder");

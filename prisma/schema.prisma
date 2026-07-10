@@ -3,37 +3,39 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("SUPABASE_DATABASE_URL")
+  directUrl = env("SUPABASE_DIRECT_URL")
 }
 
 model UserSettings {
-  id               String   @id @default(cuid())
-  profileId        String?  @unique
-  dailyCalorieGoal Int      @default(3000)
-  dailyProteinGoal Int      @default(180)
-  dailyCarbGoal    Int      @default(350)
-  dailyFatGoal     Int      @default(85)
-  dailyFiberGoal   Int      @default(30)
-  dailyWaterGoal   Int      @default(128)
-  dailyVitaminAGoal Float   @default(900)
-  dailyVitaminCGoal Float   @default(90)
-  dailyVitaminDGoal Float   @default(15)
-  dailyVitaminB12Goal Float @default(2.4)
-  dailyCalciumGoal  Float   @default(1000)
-  dailyIronGoal     Float   @default(8)
-  dailyMagnesiumGoal Float  @default(400)
-  dailyPotassiumGoal Float  @default(3400)
-  dailyZincGoal     Float   @default(11)
-  dailySodiumLimit  Float   @default(2300)
-  useRecommendedGoals Boolean @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  profile          Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  profileId           String   @unique
+  dailyCalorieGoal    Int      @default(3000)
+  dailyProteinGoal    Int      @default(180)
+  dailyCarbGoal       Int      @default(350)
+  dailyFatGoal        Int      @default(85)
+  dailyFiberGoal      Int      @default(30)
+  dailyWaterGoal      Int      @default(128)
+  dailyVitaminAGoal   Float    @default(900)
+  dailyVitaminCGoal   Float    @default(90)
+  dailyVitaminDGoal   Float    @default(15)
+  dailyVitaminB12Goal Float    @default(2.4)
+  dailyCalciumGoal    Float    @default(1000)
+  dailyIronGoal       Float    @default(8)
+  dailyMagnesiumGoal  Float    @default(400)
+  dailyPotassiumGoal  Float    @default(3400)
+  dailyZincGoal       Float    @default(11)
+  dailySodiumLimit    Float    @default(2300)
+  useRecommendedGoals Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  profile             Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }
 
 model Profile {
   id               String            @id @default(cuid())
+  authUserId       String            @unique
   displayName      String
   isDefault        Boolean           @default(false)
   heightInches     Float?
@@ -49,12 +51,13 @@ model Profile {
   todoItems        TodoItem[]
   bodyMeasurements BodyMeasurement[]
   meals            Meal[]
+  mealTemplates    MealTemplate[]
 }
 
 model DailyLog {
   id               String   @id @default(cuid())
-  profileId        String?
-  date             DateTime @unique
+  profileId        String
+  date             DateTime
   bodyWeight       Float?
   sleepHours       Float?
   restingHeartRate Int?
@@ -66,39 +69,44 @@ model DailyLog {
   notes            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  profile          Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile          Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+  @@index([profileId])
 }
 
 model TodoItem {
   id        String   @id @default(cuid())
-  profileId String?
+  profileId String
   date      DateTime
   title     String
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@index([profileId])
+  @@unique([profileId, date, title])
 }
 
 model Workout {
-  id           String     @id @default(cuid())
-  profileId    String?
-  date         DateTime
-  name         String
-  duration     String?
+  id              String     @id @default(cuid())
+  profileId       String
+  date            DateTime
+  name            String
+  duration        String?
   durationMinutes Int?
-  muscleGroups String
-  notes        String?
-  source       String     @default("manual")
-  externalId   String?    @unique
-  exercises    Exercise[]
-  profile      Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  muscleGroups    String
+  notes           String?
+  source          String     @default("manual")
+  externalId      String?
+  exercises       Exercise[]
+  profile         Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
+  @@unique([profileId, source, externalId])
   @@index([date])
   @@index([profileId])
   @@index([source])
@@ -136,11 +144,11 @@ model ExerciseSet {
 
 model WorkoutTemplate {
   id        String                    @id @default(cuid())
-  profileId String?
+  profileId String
   name      String
   notes     String?
   exercises WorkoutTemplateExercise[]
-  profile   Profile?                  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile                   @relation(fields: [profileId], references: [id], onDelete: Cascade)
   createdAt DateTime                  @default(now())
   updatedAt DateTime                  @updatedAt
 
@@ -175,7 +183,7 @@ model WorkoutTemplateSet {
 
 model BodyMeasurement {
   id         String   @id @default(cuid())
-  profileId  String?
+  profileId  String
   date       DateTime
   bodyWeight Float?
   chest      Float?
@@ -185,7 +193,7 @@ model BodyMeasurement {
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  profile    Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@index([profileId])
@@ -193,14 +201,14 @@ model BodyMeasurement {
 
 model Meal {
   id        String     @id @default(cuid())
-  profileId String?
+  profileId String
   date      DateTime
   mealType  MealType
   mealName  String
   time      String?
   notes     String?
   foodItems FoodItem[]
-  profile   Profile?   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -234,6 +242,47 @@ model FoodItem {
   meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
 
   @@index([mealId])
+}
+
+model MealTemplate {
+  id        String             @id @default(cuid())
+  profileId String
+  name      String
+  mealType  MealType
+  notes     String?
+  foodItems MealTemplateItem[]
+  profile   Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([profileId, name])
+  @@index([profileId])
+}
+
+model MealTemplateItem {
+  id          String       @id @default(cuid())
+  templateId  String
+  name        String
+  servingSize String?
+  calories    Int          @default(0)
+  protein     Float        @default(0)
+  carbs       Float        @default(0)
+  fat         Float        @default(0)
+  fiber       Float        @default(0)
+  sugar       Float        @default(0)
+  sodium      Float        @default(0)
+  vitaminA    Float        @default(0)
+  vitaminC    Float        @default(0)
+  vitaminD    Float        @default(0)
+  vitaminB12  Float        @default(0)
+  calcium     Float        @default(0)
+  iron        Float        @default(0)
+  magnesium   Float        @default(0)
+  potassium   Float        @default(0)
+  zinc        Float        @default(0)
+  template    MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }
 
 enum MealType {
