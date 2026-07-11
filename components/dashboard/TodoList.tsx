@@ -1,4 +1,7 @@
+"use client";
+
 import { Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { useActionState, useEffect, useRef } from "react";
 import { addTodo, deleteTodo, resetTodos, toggleTodo } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -12,6 +15,13 @@ type Todo = {
 };
 
 export function TodoList({ todos, date }: { todos: Todo[]; date: string }) {
+  const [addState, addAction, addPending] = useActionState(addTodo, { status: "idle" as const, message: "" });
+  const addFormRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (addState.status === "success") addFormRef.current?.reset();
+  }, [addState.status]);
+
   return (
     <Card>
       <div className="flex items-start justify-between gap-4">
@@ -72,13 +82,16 @@ export function TodoList({ todos, date }: { todos: Todo[]; date: string }) {
         )}
       </div>
 
-      <form action={addTodo} className="mt-4 flex gap-2">
-        <input type="hidden" name="date" value={date} />
-        <Input name="title" placeholder="Add a task" aria-label="Add a task" />
-        <Button className="w-12 px-0" title="Add task">
-          <Plus size={18} />
-        </Button>
-      </form>
+      <div className="mt-4">
+        <form ref={addFormRef} action={addAction} className="flex gap-2">
+          <input type="hidden" name="date" value={date} />
+          <Input name="title" placeholder="Add a task" aria-label="Add a task" disabled={addPending} />
+          <Button className="w-12 px-0" title={addPending ? "Adding task" : "Add task"} disabled={addPending}>
+            <Plus size={18} />
+          </Button>
+        </form>
+        {addState.message ? <p className={`mt-2 text-sm ${addState.status === "error" ? "text-ember" : "text-muted"}`} role="status">{addState.message}</p> : null}
+      </div>
     </Card>
   );
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { MealType } from "@prisma/client";
+import { MealType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { parseDateInput, startOfDay } from "@/lib/dates";
 import {
@@ -117,23 +117,33 @@ export async function updateDailyLog(formData: FormData) {
   revalidateApp();
 }
 
-export async function addTodo(formData: FormData) {
+export type AddTodoState = { status: "idle" | "success" | "error"; message: string };
+
+export async function addTodo(_previousState: AddTodoState, formData: FormData): Promise<AddTodoState> {
   const profile = await getDefaultProfile();
   const title = stringValue(formData, "title");
 
   if (!title) {
-    return;
+    return { status: "error", message: "Enter a task title." };
   }
 
-  await prisma.todoItem.create({
-    data: {
-      date: parseDateInput(formData.get("date")),
-      title,
-      profileId: profile.id,
-    },
-  });
+  try {
+    await prisma.todoItem.create({
+      data: {
+        date: parseDateInput(formData.get("date")),
+        title,
+        profileId: profile.id,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { status: "error", message: "That task already exists today." };
+    }
+    throw error;
+  }
 
   revalidatePath("/");
+  return { status: "success", message: "Task added." };
 }
 
 export async function toggleTodo(formData: FormData) {
