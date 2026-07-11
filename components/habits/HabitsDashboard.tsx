@@ -18,6 +18,7 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { deleteHabitRecord, saveHabitCheckIn, saveHabitRecord, updateHabitStatusRecord } from "@/app/habits/actions";
 
 type HabitType = "build" | "kick";
 type HabitCategory =
@@ -56,7 +57,7 @@ type RelapseLog = {
   preventionPlan: string;
 };
 
-type Habit = {
+export type Habit = {
   id: string;
   name: string;
   type: HabitType;
@@ -87,38 +88,6 @@ const categories: HabitCategory[] = [
 ];
 const tabs: TabKey[] = ["Today", "Build", "Kick", "Calendar", "Insights"];
 const today = new Date().toISOString().slice(0, 10);
-
-const defaultHabits: Habit[] = [
-  {
-    id: "habit-caffeine",
-    name: "Caffiene Intake",
-    type: "kick",
-    category: "Health",
-    difficulty: "Hard",
-    frequency: "Daily",
-    targetAmount: "No more thank 200mg daily",
-    reminderTime: "",
-    reason: "Improve Sleep Quality",
-    notes: "Buy non-carbonated drinks",
-    status: "Active",
-    createdAt: "2026-07-02",
-    bestStreak: 3,
-    completions: [{ id: "c9", habitId: "habit-caffeine", date: "2026-07-08", status: "relapse" }],
-    relapses: [
-      {
-        id: "r1",
-        habitId: "habit-caffeine",
-        date: "2026-07-08",
-        trigger: "Airplane Ride",
-        emotion: "Tired",
-        location: "Airport",
-        timeOfDay: "22:30",
-        reflection: "I was tired",
-        preventionPlan: "None",
-      },
-    ],
-  },
-];
 
 function dateOffset(days: number) {
   const value = new Date();
@@ -180,8 +149,8 @@ function createBlankHabit(): Habit {
   };
 }
 
-export function HabitsDashboard() {
-  const [habits, setHabits] = useState<Habit[]>(defaultHabits);
+export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
+  const [habits, setHabits] = useState<Habit[]>(initialHabits);
   const [draft, setDraft] = useState<Habit>(createBlankHabit());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -248,6 +217,7 @@ export function HabitsDashboard() {
     if (!draft.name.trim()) return;
 
     if (editingId) {
+      void saveHabitRecord({ ...draft, id: editingId });
       setHabits((current) =>
         current.map((habit) =>
           habit.id === editingId
@@ -257,6 +227,7 @@ export function HabitsDashboard() {
       );
     } else {
       const id = `habit-${Date.now()}`;
+      void saveHabitRecord({ ...draft, id });
       setHabits((current) => [{ ...draft, id, createdAt: today }, ...current]);
     }
 
@@ -272,20 +243,25 @@ export function HabitsDashboard() {
   }
 
   function setHabitStatus(id: string, status: HabitStatus) {
+    void updateHabitStatusRecord(id, status);
     setHabits((current) => current.map((habit) => (habit.id === id ? { ...habit, status } : habit)));
   }
 
   function deleteHabit(id: string) {
+    void deleteHabitRecord(id);
     setHabits((current) => current.filter((habit) => habit.id !== id));
   }
 
   function checkIn(habit: Habit, status: CompletionStatus) {
+    const completionId = `completion-${Date.now()}`;
+    const previewCompletions = [{ id: completionId, habitId: habit.id, date: today, status }, ...habit.completions.filter((completion) => completion.date !== today)];
+    const nextBestStreak = Math.max(habit.bestStreak, currentStreak({ ...habit, completions: previewCompletions }));
     setHabits((current) =>
       current.map((entry) => {
         if (entry.id !== habit.id) return entry;
         const completions = entry.completions.filter((completion) => completion.date !== today);
         const nextCompletion = {
-          id: `completion-${Date.now()}`,
+          id: completionId,
           habitId: habit.id,
           date: today,
           status,
@@ -307,10 +283,11 @@ export function HabitsDashboard() {
           ...entry,
           completions: [nextCompletion, ...completions],
           relapses: relapse,
-          bestStreak: Math.max(entry.bestStreak, currentStreak({ ...entry, completions: [nextCompletion, ...completions] })),
+          bestStreak: nextBestStreak,
         };
       }),
     );
+    void saveHabitCheckIn({ habitId: habit.id, completionId, date: today, status, bestStreak: nextBestStreak, relapse: status === "relapse" ? relapseDraft : undefined });
 
     if (status === "relapse") {
       setRelapseDraft({

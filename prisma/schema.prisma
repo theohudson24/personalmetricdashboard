@@ -34,16 +34,16 @@ model UserSettings {
 }
 
 model Profile {
-  id               String            @id @default(cuid())
-  authUserId       String            @unique
+  id               String             @id @default(cuid())
+  authUserId       String             @unique
   displayName      String
-  isDefault        Boolean           @default(false)
+  isDefault        Boolean            @default(false)
   heightInches     Float?
   weightLb         Float?
   age              Int?
   gender           String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   settings         UserSettings?
   workouts         Workout[]
   workoutTemplates WorkoutTemplate[]
@@ -52,6 +52,145 @@ model Profile {
   bodyMeasurements BodyMeasurement[]
   meals            Meal[]
   mealTemplates    MealTemplate[]
+  habits           Habit[]
+  ascensionGoals   AscensionGoal[]
+  ascensionMetrics AscensionMetric[]
+  ascensionChecks  AscensionCheckIn[]
+  ascensionPhotos  AscensionPhoto[]
+}
+
+model Habit {
+  id           String            @id @default(cuid())
+  profileId    String
+  name         String
+  type         String
+  category     String
+  difficulty   String
+  frequency    String
+  targetAmount String            @default("")
+  reminderTime String            @default("")
+  reason       String            @default("")
+  notes        String            @default("")
+  status       String            @default("Active")
+  bestStreak   Int               @default(0)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  profile      Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  completions  HabitCompletion[]
+  relapses     HabitRelapse[]
+
+  @@index([profileId])
+  @@index([profileId, status])
+}
+
+model HabitCompletion {
+  id        String   @id @default(cuid())
+  habitId   String
+  date      DateTime
+  status    String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId])
+}
+
+model HabitRelapse {
+  id             String   @id @default(cuid())
+  habitId        String
+  date           DateTime
+  trigger        String   @default("")
+  emotion        String   @default("")
+  location       String   @default("")
+  timeOfDay      String   @default("")
+  reflection     String   @default("")
+  preventionPlan String   @default("")
+  createdAt      DateTime @default(now())
+  habit          Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@index([habitId, date])
+}
+
+model AscensionGoal {
+  id           String    @id @default(cuid())
+  profileId    String
+  title        String
+  category     String
+  currentValue Float     @default(0)
+  targetValue  Float     @default(100)
+  deadline     DateTime?
+  priority     String    @default("Medium")
+  progress     Int       @default(0)
+  linkedHabits String    @default("")
+  status       String    @default("Not Started")
+  notes        String    @default("")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, status])
+}
+
+model AscensionMetric {
+  id        String   @id @default(cuid())
+  profileId String
+  category  String
+  name      String
+  value     Float
+  unit      String
+  target    Float?
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([profileId, category])
+}
+
+model AscensionCheckIn {
+  id                   String   @id @default(cuid())
+  profileId            String
+  date                 DateTime
+  sleepHours           Float
+  sleepQuality         Int
+  energy               Int
+  mood                 Int
+  stress               Int
+  workoutCompleted     Boolean
+  steps                Int
+  nutritionQuality     Int
+  protein              Float
+  water                Float
+  skincareCompleted    Boolean
+  supplementsCompleted Boolean
+  deepWorkMinutes      Int
+  screenTimeRating     Int
+  confidence           Int
+  notes                String   @default("")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  profile              Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+  @@index([profileId])
+}
+
+model AscensionPhoto {
+  id        String   @id @default(cuid())
+  profileId String
+  angle     String
+  date      DateTime
+  notes     String   @default("")
+  fileName  String   @default("")
+  objectKey String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, date])
 }
 
 model DailyLog {
@@ -85,9 +224,9 @@ model TodoItem {
   updatedAt DateTime @updatedAt
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  @@unique([profileId, date, title])
   @@index([date])
   @@index([profileId])
-  @@unique([profileId, date, title])
 }
 
 model Workout {
