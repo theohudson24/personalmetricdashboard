@@ -90,7 +90,7 @@ tests/                  Automated security and domain tests
 types/                  Shared TypeScript types
 ```
 
-The Self-improvement feature is organized consistently under `/self-improvement`. Prisma maps its code-facing model names to the existing production tables so the terminology is current without rewriting stored user data.
+The Self-improvement feature is organized consistently under `/self-improvement`, including its routes, actions, components, Prisma models, and production tables.
 
 ## Security Model
 

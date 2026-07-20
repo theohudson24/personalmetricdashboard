@@ -140,7 +140,6 @@ model SelfImprovementGoal {
   profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, status])
-  @@map("AscensionGoal")
 }
 
 model SelfImprovementMetric {
@@ -158,7 +157,6 @@ model SelfImprovementMetric {
 
   @@unique([profileId, name])
   @@index([profileId, category])
-  @@map("AscensionMetric")
 }
 
 model SelfImprovementCheckIn {
@@ -187,7 +185,6 @@ model SelfImprovementCheckIn {
 
   @@unique([profileId, date])
   @@index([profileId])
-  @@map("AscensionCheckIn")
 }
 
 model SelfImprovementPhoto {
@@ -203,7 +200,6 @@ model SelfImprovementPhoto {
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, date])
-  @@map("AscensionPhoto")
 }
 
 model SelfImprovementRoutine {
