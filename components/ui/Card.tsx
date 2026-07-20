@@ -1,12 +1,6 @@
-export function Card({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+export function Card({ children, className = "", ...props }: React.HTMLAttributes<HTMLElement>) {
   return (
-    <section className={`rounded-lg border border-white/10 bg-white/[0.055] p-4 shadow-soft backdrop-blur sm:p-5 ${className}`}>
+    <section {...props} className={`rounded-lg border border-white/10 bg-white/[0.055] p-4 shadow-soft backdrop-blur sm:p-5 ${className}`}>
       {children}
     </section>
   );

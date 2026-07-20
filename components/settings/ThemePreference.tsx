@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { signOut } from "@/app/login/actions";
-import { Button } from "@/components/ui/Button";
 
 export function ThemePreference() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -28,9 +26,6 @@ export function ThemePreference() {
         <button type="button" onClick={() => choose("dark")} className={`rounded-md border p-4 text-left ${theme === "dark" ? "border-core bg-core/10" : "border-line bg-black/10"}`}><Moon className="mb-3" size={20} /><span className="font-semibold">Dark</span></button>
         <button type="button" onClick={() => choose("light")} className={`rounded-md border p-4 text-left ${theme === "light" ? "border-core bg-core/10" : "border-line bg-black/10"}`}><Sun className="mb-3" size={20} /><span className="font-semibold">Light</span></button>
       </div>
-      <form action={signOut} className="mt-4 border-t border-line pt-4">
-        <Button variant="ghost">Sign out of this device</Button>
-      </form>
     </Card>
   );
 }

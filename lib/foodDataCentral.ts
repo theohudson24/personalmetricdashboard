@@ -23,6 +23,9 @@ export type FoodSearchResult = {
   dataType: string;
   brandOwner?: string;
   nutrientsPer100g: FoodNutrition;
+  barcode?: string;
+  servingGrams?: number;
+  servingLabel?: string;
 };
 
 type FdcNutrient = {

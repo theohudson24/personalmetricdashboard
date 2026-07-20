@@ -1,0 +1,9 @@
+"use client";
+import { useActionState } from "react";
+import { LogOut, UserRound } from "lucide-react";
+import { signOut } from "@/app/login/actions";
+import { idleSettingsState, updateAccount } from "@/app/settings/actions";
+import { Card, CardHeader } from "@/components/ui/Card";
+import { Field, Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+export function AccountSettings({ account }: { account: { displayName: string; email: string; phone: string } }) { const [state, action, pending] = useActionState(updateAccount, idleSettingsState); return <Card><CardHeader title="Profile and account" description="Update your identity and sign-in details. Contact changes may require verification."/><form action={action} className="grid gap-3 sm:grid-cols-2"><Field label="Account name"><Input name="displayName" defaultValue={account.displayName} required/></Field><Field label="Email"><Input name="email" type="email" defaultValue={account.email} required/></Field><Field label="Phone number"><Input name="phone" type="tel" defaultValue={account.phone} placeholder="+1 555 555 5555"/></Field><Field label="New password"><Input name="password" type="password" minLength={12} placeholder="Leave blank to keep current password"/></Field><div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3"><Button disabled={pending}><UserRound size={16}/><span className="ml-2">{pending ? "Updating…" : "Update account"}</span></Button>{state.message ? <p className={`text-sm ${state.status === "error" ? "text-ember" : "text-core"}`}>{state.message}</p> : null}</div></form><form action={signOut} className="mt-5 border-t border-line pt-5"><Button variant="secondary"><LogOut size={16}/><span className="ml-2">Log out of this account</span></Button></form></Card>; }

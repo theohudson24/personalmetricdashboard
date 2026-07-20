@@ -44,6 +44,7 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
   const [goalMode, setGoalMode] = useState<"recommended" | "custom">(settings.useRecommendedGoals ? "recommended" : "custom");
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
   const [hasChanges, setHasChanges] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -63,11 +64,10 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
 
   useEffect(() => {
     if (!hasChanges) return;
-    const summary = () => `Confirm your saved settings before leaving:\nHeight: ${profileValues.heightFeet || "–"} ft ${profileValues.heightInchesRemainder || "–"} in\nWeight: ${profileValues.weightLb || "–"} lb\nAge: ${profileValues.age || "–"}\nGender: ${profileValues.gender || "–"}\nNutrition targets: ${goalMode === "recommended" ? "estimated from profile" : "manually customized"}`;
     const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
     const confirmNavigation = (event: MouseEvent) => {
-      const anchor = (event.target as HTMLElement).closest("a");
-      if (anchor && !window.confirm(summary())) event.preventDefault();
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+      if (anchor && anchor.target !== "_blank" && anchor.href !== window.location.href) { event.preventDefault(); setPendingHref(anchor.href); }
     };
     window.addEventListener("beforeunload", beforeUnload);
     document.addEventListener("click", confirmNavigation, true);
@@ -120,6 +120,7 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
         <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">{macroFields.map(({ key, label, step }) => <Field key={key} label={label}><Input type="number" step={step} value={goals[key]} onChange={(e) => updateGoal(key, e.target.value)} /></Field>)}</div>
         <div className="content-start"><h3 className="mb-3 text-sm font-semibold">Daily micronutrient goals</h3><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{microFields.map(({ key, label, step }) => <Field key={key} label={label}><Input type="number" step={step} value={goals[key]} onChange={(e) => updateGoal(key, e.target.value)} /></Field>)}</div></div>
       </div>
+      {pendingHref ? <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="settings-leave-title"><div className="w-full max-w-lg rounded-lg border border-line bg-panel p-5 shadow-2xl"><h3 id="settings-leave-title" className="text-lg font-semibold">Confirm your settings</h3><p className="mt-2 text-sm text-muted">Review the profile information that will remain saved to your account.</p><dl className="mt-4 grid grid-cols-2 gap-2 rounded-md border border-line bg-black/15 p-3 text-sm"><dt className="text-muted">Height</dt><dd>{profileValues.heightFeet || "–"} ft {profileValues.heightInchesRemainder || "–"} in</dd><dt className="text-muted">Weight</dt><dd>{profileValues.weightLb || "–"} lb</dd><dt className="text-muted">Age</dt><dd>{profileValues.age || "–"}</dd><dt className="text-muted">Gender</dt><dd>{profileValues.gender || "–"}</dd><dt className="text-muted">Targets</dt><dd>{goalMode === "recommended" ? "Estimated" : "Customized"}</dd></dl><div className="mt-5 flex justify-end gap-2"><button type="button" className="min-h-11 rounded-md border border-line px-4 text-sm" onClick={() => setPendingHref(null)}>Go back</button><button type="button" disabled={saveState === "saving"} className="min-h-11 rounded-md border border-core bg-core px-4 text-sm font-medium text-[#07100d] disabled:opacity-50" onClick={() => { setHasChanges(false); window.location.assign(pendingHref); }}>{saveState === "saving" ? "Saving…" : "Save and continue"}</button></div></div></div> : null}
     </Card>
   );
 }

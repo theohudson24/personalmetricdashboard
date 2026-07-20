@@ -4,37 +4,66 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
+import { todayUtc, weekStartUtc } from "@/lib/selfImprovement";
 
-const category = z.enum(["Physical", "Health", "Mental", "Appearance", "Lifestyle"]);
-const checkInSchema = z.object({ sleepHours: z.number().min(0).max(24), sleepQuality: z.number().int().min(1).max(10), energy: z.number().int().min(1).max(10), mood: z.number().int().min(1).max(10), stress: z.number().int().min(1).max(10), workoutCompleted: z.boolean(), steps: z.number().int().min(0).max(200000), nutritionQuality: z.number().int().min(1).max(10), protein: z.number().min(0).max(2000), water: z.number().min(0).max(2000), skincareCompleted: z.boolean(), supplementsCompleted: z.boolean(), deepWorkMinutes: z.number().int().min(0).max(1440), screenTimeRating: z.number().int().min(1).max(10), confidence: z.number().int().min(1).max(10), notes: z.string().max(5000) });
-const goalSchema = z.object({ id: z.string().min(1).max(100), title: z.string().trim().min(1).max(200), category, currentValue: z.number().finite(), targetValue: z.number().finite(), deadline: z.string().max(20), priority: z.enum(["Low", "Medium", "High"]), progress: z.number().int().min(0).max(100), linkedHabits: z.string().max(1000), status: z.enum(["Not Started", "In Progress", "Completed", "Paused"]), notes: z.string().max(5000) });
-const metricSchema = z.object({ id: z.string().min(1).max(100), category, name: z.string().trim().min(1).max(200), value: z.number().finite(), unit: z.string().max(30), target: z.number().finite().optional(), notes: z.string().max(3000) });
+const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
+const category = z.string().trim().min(1).max(100);
+const id = z.string().min(1).max(100);
+function refresh() { revalidatePath("/ascension"); revalidatePath("/self-improvement"); }
 
-export async function saveAscensionCheckIn(input: unknown) {
-  const data = checkInSchema.parse(input);
+export async function addImprovementChecklistItem(formData: FormData) {
   const profile = await getDefaultProfile();
-  const date = new Date(); date.setUTCHours(0, 0, 0, 0);
-  await prisma.ascensionCheckIn.upsert({ where: { profileId_date: { profileId: profile.id, date } }, update: data, create: { profileId: profile.id, date, ...data } });
-  revalidatePath("/ascension");
+  const title = z.string().trim().min(1).max(160).parse(text(formData, "title"));
+  await prisma.selfImprovementChecklistItem.upsert({
+    where: { profileId_date_title: { profileId: profile.id, date: todayUtc(), title } }, update: { category: category.parse(text(formData, "category")) },
+    create: { profileId: profile.id, date: todayUtc(), title, category: category.parse(text(formData, "category")) },
+  }); refresh();
 }
 
-export async function saveAscensionGoal(input: unknown) {
-  const goal = goalSchema.parse(input);
-  const profile = await getDefaultProfile();
-  const data = { title: goal.title, category: goal.category, currentValue: goal.currentValue, targetValue: goal.targetValue, deadline: goal.deadline ? new Date(`${goal.deadline}T00:00:00.000Z`) : null, priority: goal.priority, progress: goal.progress, linkedHabits: goal.linkedHabits, status: goal.status, notes: goal.notes };
-  const existing = await prisma.ascensionGoal.findFirst({ where: { id: goal.id, profileId: profile.id }, select: { id: true } });
-  if (existing) await prisma.ascensionGoal.update({ where: { id: goal.id }, data }); else await prisma.ascensionGoal.create({ data: { id: goal.id, profileId: profile.id, ...data } });
-  revalidatePath("/ascension");
+export async function toggleImprovementChecklistItem(formData: FormData) {
+  const profile = await getDefaultProfile(); const itemId = id.parse(text(formData, "id"));
+  await prisma.selfImprovementChecklistItem.updateMany({ where: { id: itemId, profileId: profile.id }, data: { completed: text(formData, "completed") !== "true" } }); refresh();
 }
 
-export async function deleteAscensionGoal(id: string) {
+export async function deleteImprovementChecklistItem(formData: FormData) {
   const profile = await getDefaultProfile();
-  await prisma.ascensionGoal.deleteMany({ where: { id: z.string().min(1).max(100).parse(id), profileId: profile.id } });
+  await prisma.selfImprovementChecklistItem.deleteMany({ where: { id: id.parse(text(formData, "id")), profileId: profile.id } }); refresh();
 }
 
-export async function saveAscensionMetric(input: unknown) {
-  const metric = metricSchema.parse(input);
+export async function createImprovementGoal(formData: FormData) {
+  const profile = await getDefaultProfile(); const title = z.string().trim().min(1).max(200).parse(text(formData, "title"));
+  const currentValue = Number(formData.get("baseline")) || 0; const targetValue = Number(formData.get("target")) || 100;
+  await prisma.ascensionGoal.create({ data: { profileId: profile.id, title, category: category.parse(text(formData, "category")), currentValue, targetValue, deadline: text(formData, "targetDate") ? new Date(`${text(formData, "targetDate")}T00:00:00.000Z`) : null, priority: z.enum(["Low", "Medium", "High"]).parse(text(formData, "priority")), progress: targetValue > 0 ? Math.max(0, Math.min(100, Math.round(currentValue / targetValue * 100))) : 0, linkedHabits: text(formData, "weeklyActions").slice(0, 1000), status: "Active", notes: [text(formData, "motivation"), text(formData, "notes")].filter(Boolean).join("\n\n").slice(0, 5000) } }); refresh();
+}
+
+export async function setImprovementGoalStatus(formData: FormData) {
+  const profile = await getDefaultProfile(); const goalId = id.parse(text(formData, "id"));
+  const status = z.enum(["Not started", "Active", "Paused", "Completed", "Archived"]).parse(text(formData, "status"));
+  await prisma.ascensionGoal.updateMany({ where: { id: goalId, profileId: profile.id }, data: { status, ...(status === "Completed" ? { progress: 100 } : {}) } }); refresh();
+}
+
+export async function deleteImprovementGoal(formData: FormData) {
+  const profile = await getDefaultProfile(); await prisma.ascensionGoal.deleteMany({ where: { id: id.parse(text(formData, "id")), profileId: profile.id } }); refresh();
+}
+
+export async function createImprovementRoutine(formData: FormData) {
   const profile = await getDefaultProfile();
-  const data = { category: metric.category, name: metric.name, value: metric.value, unit: metric.unit, target: metric.target ?? null, notes: metric.notes };
-  await prisma.ascensionMetric.upsert({ where: { profileId_name: { profileId: profile.id, name: metric.name } }, update: data, create: { id: metric.id, profileId: profile.id, ...data } });
+  const tasks = text(formData, "tasks").split("\n").map((task) => task.trim()).filter(Boolean).slice(0, 20);
+  await prisma.selfImprovementRoutine.create({ data: { profileId: profile.id, name: z.string().trim().min(1).max(120).parse(text(formData, "name")), category: category.parse(text(formData, "category")), frequency: z.string().trim().min(1).max(60).parse(text(formData, "frequency")), preferredTime: text(formData, "preferredTime") || null, estimatedMinutes: Math.max(1, Math.min(240, Number(formData.get("estimatedMinutes")) || 10)), notes: text(formData, "notes").slice(0, 2000) || null, tasks: { create: tasks.map((title, orderIndex) => ({ title, orderIndex })) } } }); refresh();
+}
+
+export async function toggleRoutineTask(formData: FormData) {
+  const profile = await getDefaultProfile(); const taskId = id.parse(text(formData, "id"));
+  const task = await prisma.selfImprovementRoutineTask.findFirst({ where: { id: taskId, routine: { profileId: profile.id } } });
+  if (task) await prisma.selfImprovementRoutineTask.update({ where: { id: task.id }, data: { completed: !task.completed } }); refresh();
+}
+
+export async function deleteImprovementRoutine(formData: FormData) {
+  const profile = await getDefaultProfile(); await prisma.selfImprovementRoutine.deleteMany({ where: { id: id.parse(text(formData, "id")), profileId: profile.id } }); refresh();
+}
+
+export async function saveWeeklyReview(formData: FormData) {
+  const profile = await getDefaultProfile();
+  const data = { wentWell: text(formData, "wentWell").slice(0, 4000), difficult: text(formData, "difficult").slice(0, 4000), improvedCategory: category.parse(text(formData, "improvedCategory")), attentionCategory: category.parse(text(formData, "attentionCategory")), confidence: z.coerce.number().int().min(1).max(10).parse(formData.get("confidence")), positiveDifference: text(formData, "positiveDifference").slice(0, 4000), adjustment: text(formData, "adjustment").slice(0, 4000), priorities: text(formData, "priorities").slice(0, 2000) };
+  await prisma.selfImprovementWeeklyReview.upsert({ where: { profileId_weekStart: { profileId: profile.id, weekStart: weekStartUtc() } }, update: data, create: { profileId: profile.id, weekStart: weekStartUtc(), ...data } }); refresh();
 }

@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
+import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 
 export function Field({
   label,
@@ -15,14 +15,15 @@ export function Field({
   );
 }
 
-export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(props, ref) {
   return (
     <input
+      ref={ref}
       className="w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition placeholder:text-muted/70 hover:border-core/40 focus:border-core"
       {...props}
     />
   );
-}
+});
 
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
