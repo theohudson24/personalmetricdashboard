@@ -19,6 +19,7 @@ type FoodDraft = FoodNutrition & {
   selectedFood?: FoodSearchResult;
   searchResults: FoodSearchResult[];
   isSearching: boolean;
+  searchError: string;
 };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -60,6 +61,7 @@ function newFoodDraft(): FoodDraft {
     gramsPerServing: 100,
     searchResults: [],
     isSearching: false,
+    searchError: "",
     ...emptyNutrition,
   };
 }
@@ -94,6 +96,7 @@ function updatesForWeight(item: FoodDraft, grams: number): Partial<FoodDraft> {
 }
 
 export function MealForm() {
+  const [entryKind, setEntryKind] = useState<"MEAL" | "ITEM" | "DRINK" | "SNACK">("ITEM");
   const [items, setItems] = useState<FoodDraft[]>([newFoodDraft()]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
 
@@ -108,19 +111,21 @@ export function MealForm() {
       return;
     }
 
-    updateItem(item.id, { isSearching: true, searchResults: [] });
+    updateItem(item.id, { isSearching: true, searchResults: [], searchError: "" });
 
     try {
       const response = await fetch(
         `/api/foods/search?query=${encodeURIComponent(item.foodName)}`,
       );
-      const data = (await response.json()) as { foods?: FoodSearchResult[] };
+      const data = (await response.json()) as { foods?: FoodSearchResult[]; error?: string };
+      if (!response.ok) throw new Error(data.error || "Food search failed on our end.");
       updateItem(item.id, {
         searchResults: data.foods ?? [],
         isSearching: false,
+        searchError: data.foods?.length ? "" : "No matching foods were found. Try a brand name or enter the nutrition manually.",
       });
-    } catch {
-      updateItem(item.id, { searchResults: [], isSearching: false });
+    } catch (error) {
+      updateItem(item.id, { searchResults: [], isSearching: false, searchError: error instanceof Error ? error.message : "Food search is temporarily unavailable on our end. Our development team is working to keep it reliable." });
     }
   }
 
@@ -143,16 +148,20 @@ export function MealForm() {
   return (
     <Card>
       <CardHeader
-        title="Daily meal logger"
-        description="Search foods by weight or manually edit nutrition values."
+        title="Log food and drinks"
+        description="Add one item, drink, or snack quickly—or build a complete meal from multiple ingredients."
       />
       <form action={createMeal} className="space-y-5">
+        <input type="hidden" name="entryKind" value={entryKind} />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Nutrition entry type">
+          {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-[#07100d]" : "border-line bg-black/15 text-muted"}`}>{label}</button>)}
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Date">
             <Input name="date" type="date" defaultValue={today} />
           </Field>
-          <Field label="Meal type">
-            <Select name="mealType" defaultValue="BREAKFAST">
+          <Field label={entryKind === "MEAL" ? "Meal type" : "Time of day"}>
+            <Select key={entryKind} name="mealType" defaultValue={entryKind === "SNACK" ? "SNACK" : "BREAKFAST"}>
               {mealTypes.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -160,9 +169,7 @@ export function MealForm() {
               ))}
             </Select>
           </Field>
-          <Field label="Meal name">
-            <Input name="mealName" placeholder="Chicken rice bowl" required />
-          </Field>
+          {entryKind === "MEAL" ? <Field label="Meal name"><Input name="mealName" placeholder="Chicken rice bowl" required /></Field> : null}
           <Field label="Time">
             <Input name="time" type="time" />
           </Field>
@@ -177,7 +184,7 @@ export function MealForm() {
           {items.map((item, index) => (
             <div key={item.id} className="rounded-md border border-line bg-black/10 p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold">Ingredient #{index + 1}</p>
+                <p className="text-sm font-semibold">{entryKind === "MEAL" ? `Ingredient #${index + 1}` : entryKind === "DRINK" ? "Drink" : entryKind === "SNACK" ? "Snack" : "Item"}</p>
                 <div className="flex gap-1">
                 <Button type="button" variant="secondary" className="h-11 border-core/50 bg-core/10 px-3 text-core shadow-[0_0_18px_rgba(77,183,167,0.12)] hover:bg-core/20" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"} aria-expanded={expandedIds.has(item.id)}>
                   {expandedIds.has(item.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -210,7 +217,6 @@ export function MealForm() {
                       onChange={(event) =>
                         updateItem(item.id, {
                           foodName: event.target.value,
-                          selectedFood: undefined,
                         })
                       }
                       placeholder="Ingredient Name"
@@ -254,19 +260,30 @@ export function MealForm() {
                       >
                         <span className="block text-sm font-medium">{result.description}</span>
                         <span className="mt-1 block text-xs text-muted">
-                          {result.dataType}
+                          {result.source ?? result.dataType}
                           {result.brandOwner ? ` / ${result.brandOwner}` : ""} / per 100g:{" "}
                           {Math.round(result.nutrientsPer100g.calories)} kcal,{" "}
                           {Math.round(result.nutrientsPer100g.protein)}g protein
                         </span>
+                        {result.confidence !== "complete" ? <span className="mt-1 block text-xs text-ember">{result.confidence === "missing" ? "Nutrition is mostly missing—review before logging." : "Some nutrients are not provided—review highlighted values before logging."}</span> : null}
                       </button>
                     ))}
                   </div>
                 ) : null}
+                {item.searchError ? <p className="mt-3 text-sm text-ember" role="alert">{item.searchError}</p> : null}
               </div>
 
               <input type="hidden" name="foodName" value={item.foodName} />
               <input type="hidden" name="servingSize" value={item.servingSize || `${item.grams} g`} />
+              <input type="hidden" name="foodBarcode" value={item.selectedFood?.barcode ?? ""} />
+              <input type="hidden" name="foodSource" value={item.selectedFood?.source ?? item.selectedFood?.dataType ?? "Manual"} />
+              <input type="hidden" name="foodBrand" value={item.selectedFood?.brandOwner ?? ""} />
+              <input type="hidden" name="foodGrams" value={item.grams} />
+
+              {item.selectedFood ? <div className={`mb-3 rounded-md border p-3 text-sm ${item.selectedFood.confidence === "complete" ? "border-core/30 bg-core/10 text-muted" : "border-ember/40 bg-ember/10 text-ink"}`}>
+                <span className="font-semibold">Source: {item.selectedFood.source ?? item.selectedFood.dataType}.</span>{" "}
+                {item.selectedFood.confidence === "complete" ? "Core nutrition data is available." : `${item.selectedFood.missingNutrients?.length ?? 0} nutrient values were not provided. Check and correct the values before logging; your corrected barcode will be remembered.`}
+              </div> : null}
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
@@ -305,6 +322,10 @@ export function MealForm() {
                   <span>{Math.round(item.calories)} kcal · {Math.round(item.protein)}g protein</span>
                   <input type="hidden" name="foodName" value={item.foodName} />
                   <input type="hidden" name="servingSize" value={item.servingSize || `${item.grams} g`} />
+                  <input type="hidden" name="foodBarcode" value={item.selectedFood?.barcode ?? ""} />
+                  <input type="hidden" name="foodSource" value={item.selectedFood?.source ?? item.selectedFood?.dataType ?? "Manual"} />
+                  <input type="hidden" name="foodBrand" value={item.selectedFood?.brandOwner ?? ""} />
+                  <input type="hidden" name="foodGrams" value={item.grams} />
                   {Object.keys(emptyNutrition).map((name) => <input key={name} type="hidden" name={name} value={item[name as keyof FoodNutrition]} />)}
                 </div>
               )}
@@ -313,7 +334,7 @@ export function MealForm() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button
+          {entryKind === "MEAL" ? <Button
             type="button"
             variant="secondary"
             onClick={() => {
@@ -324,12 +345,12 @@ export function MealForm() {
           >
             <Plus size={16} />
             <span className="ml-2">Add food</span>
-          </Button>
-          <Button>Save meal</Button>
-          <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
+          </Button> : null}
+          <Button>{entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`}</Button>
+          {entryKind === "MEAL" ? <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
             <input type="checkbox" name="saveAsTemplate" className="accent-[#4db7a7]" />
             Save this meal as a reusable template
-          </label>
+          </label> : null}
         </div>
       </form>
     </Card>

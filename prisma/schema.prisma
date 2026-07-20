@@ -42,6 +42,8 @@ model Profile {
   weightLb             Float?
   age                  Int?
   gender               String?
+  activityLevel        String?                        @default("moderate")
+  phone                String?
   createdAt            DateTime                       @default(now())
   updatedAt            DateTime                       @updatedAt
   settings             UserSettings?
@@ -52,6 +54,10 @@ model Profile {
   bodyMeasurements     BodyMeasurement[]
   meals                Meal[]
   mealTemplates        MealTemplate[]
+  savedFoods           SavedFood[]
+  bugReports           BugReport[]
+  errorEvents          ErrorEvent[]
+  deletionRequests     AccountDeletionRequest[]
   habits               Habit[]
   ascensionGoals       AscensionGoal[]
   ascensionMetrics     AscensionMetric[]
@@ -411,6 +417,7 @@ model Meal {
   date      DateTime
   mealType  MealType
   mealName  String
+  entryKind String     @default("MEAL")
   time      String?
   notes     String?
   foodItems FoodItem[]
@@ -448,6 +455,92 @@ model FoodItem {
   meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
 
   @@index([mealId])
+}
+
+model SavedFood {
+  id           String   @id @default(cuid())
+  profileId    String
+  barcode      String
+  name         String
+  brand        String?
+  source       String   @default("User corrected")
+  servingGrams Float    @default(100)
+  servingLabel String?
+  calories     Float    @default(0)
+  protein      Float    @default(0)
+  carbs        Float    @default(0)
+  fat          Float    @default(0)
+  fiber        Float    @default(0)
+  sugar        Float    @default(0)
+  sodium       Float    @default(0)
+  vitaminA     Float    @default(0)
+  vitaminC     Float    @default(0)
+  vitaminD     Float    @default(0)
+  vitaminB12   Float    @default(0)
+  calcium      Float    @default(0)
+  iron         Float    @default(0)
+  magnesium    Float    @default(0)
+  potassium    Float    @default(0)
+  zinc         Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, barcode])
+  @@index([profileId, updatedAt])
+}
+
+model BugReport {
+  id             String   @id @default(cuid())
+  profileId      String
+  category       String
+  summary        String
+  description    String
+  pageUrl        String?
+  deviceInfo     String?
+  status         String   @default("OPEN")
+  developerNotes String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ErrorEvent {
+  id          String   @id @default(cuid())
+  profileId   String
+  fingerprint String
+  route       String
+  category    String
+  digest      String?
+  deviceClass String?
+  occurrences Int      @default(1)
+  status      String   @default("OPEN")
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, fingerprint])
+  @@index([lastSeenAt])
+}
+
+model AccountDeletionRequest {
+  id          String    @id @default(cuid())
+  profileId   String?
+  authUserId  String
+  displayName String
+  reason      String?
+  status      String    @default("REQUESTED")
+  adminNotes  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  reviewedAt  DateTime?
+  profile     Profile?  @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([profileId, createdAt])
+  @@index([status, createdAt])
 }
 
 model MealTemplate {

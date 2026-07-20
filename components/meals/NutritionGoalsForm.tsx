@@ -9,7 +9,7 @@ import { calculateNutritionRecommendation, type NutritionRecommendation } from "
 
 type GoalKey = Exclude<keyof NutritionRecommendation, "bmi">;
 type GoalValues = Record<GoalKey, number>;
-type ProfileValues = { heightFeet: string; heightInchesRemainder: string; weightLb: string; age: string; gender: string };
+type ProfileValues = { heightFeet: string; heightInchesRemainder: string; weightLb: string; age: string; gender: string; activityLevel: string };
 
 const goalFields: Array<{ key: GoalKey; label: string; step?: string }> = [
   { key: "dailyCalorieGoal", label: "Calories" }, { key: "dailyProteinGoal", label: "Protein g" },
@@ -37,7 +37,7 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
   const [profileValues, setProfileValues] = useState<ProfileValues>({
     heightFeet: profile?.heightInches ? String(Math.floor(profile.heightInches / 12)) : "",
     heightInchesRemainder: profile?.heightInches ? String(Math.round(profile.heightInches % 12)) : "",
-    weightLb: profile?.weightLb ? String(profile.weightLb) : "", age: profile?.age ? String(profile.age) : "", gender: profile?.gender ?? "",
+    weightLb: profile?.weightLb ? String(profile.weightLb) : "", age: profile?.age ? String(profile.age) : "", gender: profile?.gender ?? "", activityLevel: profile?.activityLevel ?? "moderate",
   });
   const [estimate, setEstimate] = useState<NutritionRecommendation | null>(recommendation ?? null);
   const [goals, setGoals] = useState<GoalValues>(() => goalsFrom(settings.useRecommendedGoals && recommendation ? recommendation : settings));
@@ -80,7 +80,7 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
     setHasChanges(true);
     const calculated = calculateNutritionRecommendation({
       heightInches: (Number(next.heightFeet) || 0) * 12 + (Number(next.heightInchesRemainder) || 0),
-      weightLb: Number(next.weightLb) || null, age: Number(next.age) || null, gender: next.gender || null,
+      weightLb: Number(next.weightLb) || null, age: Number(next.age) || null, gender: next.gender || null, activityLevel: next.activityLevel || "moderate",
     });
     setEstimate(calculated);
     if (calculated) { setGoals(goalsFrom(calculated)); setGoalMode("recommended"); }
@@ -110,11 +110,12 @@ export function NutritionGoalsForm({ settings, profile, recommendation, showProf
               <Field label="Weight lb"><Input type="number" min="0" step="0.1" value={profileValues.weightLb} onChange={(e) => updateProfile("weightLb", e.target.value)} /></Field>
               <Field label="Age"><Input type="number" min="0" value={profileValues.age} onChange={(e) => updateProfile("age", e.target.value)} /></Field>
               <label className="block"><span className="mb-1.5 block text-sm font-medium text-ink">Gender</span><select value={profileValues.gender} onChange={(e) => updateProfile("gender", e.target.value)} className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink"><option value="">Select gender</option><option value="male">Male</option><option value="female">Female</option></select></label>
+              <label className="block sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-ink">Activity level</span><select value={profileValues.activityLevel} onChange={(e) => updateProfile("activityLevel", e.target.value)} className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink"><option value="sedentary">Mostly sedentary</option><option value="light">Light activity (1–3 days/week)</option><option value="moderate">Moderate activity (3–5 days/week)</option><option value="very_active">Very active (6–7 days/week)</option></select></label>
             </div>
           </div>
           <div className="rounded-md border border-line bg-black/15 p-3">
             <h3 className="text-sm font-semibold">Recommended estimate</h3>
-            {estimate ? <><p className="mt-1 text-sm text-muted">Live estimate based on BMI {estimate.bmi}. These values are already populated below.</p><div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{goalFields.map(({ key, label }) => <span key={key}>{label}: {estimate[key]}</span>)}</div></> : <p className="mt-3 text-sm text-muted">Enter height, weight, age, and gender to generate estimates.</p>}
+            {estimate ? <><p className="mt-1 text-sm text-muted">Live maintenance estimate using height, weight, age, sex, and activity; BMI {estimate.bmi} is context only. Micronutrient references primarily vary by age and sex.</p><div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">{goalFields.map(({ key, label }) => <span key={key}>{label}: {estimate[key]}</span>)}</div></> : <p className="mt-3 text-sm text-muted">Enter height, weight, age, and gender to generate estimates.</p>}
           </div>
         </> : null}
         <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">{macroFields.map(({ key, label, step }) => <Field key={key} label={label}><Input type="number" step={step} value={goals[key]} onChange={(e) => updateGoal(key, e.target.value)} /></Field>)}</div>

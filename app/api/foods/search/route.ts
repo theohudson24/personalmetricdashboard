@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { extractNutrition, type FoodSearchResult } from "@/lib/foodDataCentral";
+import { extractNutrition, nutritionQuality, type FoodSearchResult } from "@/lib/foodDataCentral";
+import { requireUser } from "@/lib/auth";
 
 type FdcSearchFood = {
   fdcId: number;
@@ -16,6 +17,7 @@ type FdcSearchFood = {
 };
 
 export async function GET(request: Request) {
+  await requireUser();
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim();
 
@@ -24,35 +26,41 @@ export async function GET(request: Request) {
   }
 
   const apiKey = process.env.FDC_API_KEY || "DEMO_KEY";
-  const response = await fetch(
-    `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query,
-        pageSize: 8,
-        dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"],
-      }),
-      next: { revalidate: 60 * 60 * 24 },
-    },
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          pageSize: 8,
+          dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"],
+        }),
+        next: { revalidate: 60 * 60 * 24 },
+      },
+    );
+  } catch {
+    return NextResponse.json({ error: "Food search is temporarily unavailable on our end. Our development team is working to keep it reliable.", foods: [] }, { status: 503 });
+  }
 
   if (!response.ok) {
     return NextResponse.json(
-      { error: "FoodData Central search failed", foods: [] },
+      { error: "Food search is temporarily unavailable on our end. Our development team is working to keep it reliable.", foods: [] },
       { status: response.status },
     );
   }
 
   const data = (await response.json()) as { foods?: FdcSearchFood[] };
-  const foods: FoodSearchResult[] = (data.foods ?? []).map((food) => ({
-    fdcId: food.fdcId,
-    description: food.description,
-    dataType: food.dataType,
-    brandOwner: food.brandOwner,
-    nutrientsPer100g: extractNutrition(food.foodNutrients),
-  }));
+  const foods: FoodSearchResult[] = (data.foods ?? []).map((food) => {
+    const nutrientsPer100g = extractNutrition(food.foodNutrients);
+    return {
+      fdcId: food.fdcId, description: food.description, dataType: food.dataType,
+      source: "USDA FoodData Central", brandOwner: food.brandOwner, nutrientsPer100g,
+      ...nutritionQuality(nutrientsPer100g),
+    };
+  });
 
   return NextResponse.json({ foods });
 }

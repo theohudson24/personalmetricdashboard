@@ -3,12 +3,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isEmailAllowed } from "@/lib/access";
 
 const credentialsSchema = z.object({ email: z.string().email().max(320), password: z.string().min(12).max(128) });
 
 function isAllowed(email: string) {
-  const allowed = new Set((process.env.TEST_USER_EMAILS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean));
-  return allowed.size > 0 && allowed.has(email.toLowerCase());
+  return isEmailAllowed(email, process.env.TEST_USER_EMAILS);
 }
 
 export async function signIn(_state: string | null, formData: FormData) {

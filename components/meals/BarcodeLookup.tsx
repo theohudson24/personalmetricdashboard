@@ -5,9 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { FoodSearchResult } from "@/lib/foodDataCentral";
-
-type Detector = { detect(source: ImageBitmapSource): Promise<Array<{ rawValue: string }>> };
-type DetectorConstructor = new (options?: { formats?: string[] }) => Detector;
+import type { IScannerControls } from "@zxing/browser";
 
 export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) => void }) {
   const [barcode, setBarcode] = useState("");
@@ -15,7 +13,7 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
 
   async function lookup(code = barcode) {
     const clean = code.replace(/\D/g, "");
@@ -30,26 +28,25 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
     finally { setLoading(false); }
   }
 
-  function stopScan() { streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null; setScanning(false); }
+  function stopScan() { controlsRef.current?.stop(); controlsRef.current = null; setScanning(false); }
 
   async function startScan() {
-    const DetectorClass = (window as unknown as { BarcodeDetector?: DetectorConstructor }).BarcodeDetector;
-    if (!DetectorClass) { setError("Camera barcode scanning is not supported in this browser. Enter the barcode below instead."); return; }
+    if (!navigator.mediaDevices?.getUserMedia) { setError("This browser cannot access a camera. Enter the barcode below instead."); return; }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
-      streamRef.current = stream; setScanning(true); setError("");
-      requestAnimationFrame(() => { if (videoRef.current) { videoRef.current.srcObject = stream; void videoRef.current.play(); } });
-      const detector = new DetectorClass({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
-      const scan = async () => {
-        if (!streamRef.current || !videoRef.current) return;
-        try { const codes = await detector.detect(videoRef.current); if (codes[0]?.rawValue) { await lookup(codes[0].rawValue); return; } } catch {}
-        if (streamRef.current) requestAnimationFrame(scan);
-      };
-      requestAnimationFrame(scan);
-    } catch { setError("Camera access was denied or unavailable. You can enter the barcode manually."); stopScan(); }
+      setScanning(true); setError("");
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      if (!videoRef.current) throw new Error("Camera preview did not initialize.");
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const reader = new BrowserMultiFormatReader();
+      controlsRef.current = await reader.decodeFromConstraints(
+        { video: { facingMode: { ideal: "environment" } }, audio: false },
+        videoRef.current,
+        (result) => { if (result?.getText()) void lookup(result.getText()); },
+      );
+    } catch (cause) { setError(cause instanceof Error && cause.name === "NotAllowedError" ? "Camera permission was denied. Allow camera access in your browser settings or enter the barcode manually." : "The camera could not start. Enter the barcode manually or try another browser."); stopScan(); }
   }
 
-  useEffect(() => stopScan, []);
+  useEffect(() => () => controlsRef.current?.stop(), []);
 
   return <div className="mb-4 rounded-md border border-line bg-black/15 p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Barcode lookup</p><p className="text-xs text-muted">Scan on mobile or type the number on a computer.</p></div>
