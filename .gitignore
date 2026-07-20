@@ -4,6 +4,7 @@ node_modules/
 # Next.js
 .next/
 out/
+.vercel/
 
 # production
 build/
@@ -36,6 +37,14 @@ yarn-error.log*
 pnpm-debug.log*
 dev-server.log
 dev-server.err
+
+# test and tool output
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+.eslintcache
+.turbo/
 
 # personal import data
 imports/*
