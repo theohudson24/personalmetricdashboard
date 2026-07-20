@@ -3,6 +3,7 @@ type ProfileMetrics = {
   weightLb: number | null;
   age?: number | null;
   gender?: string | null;
+  activityLevel?: string | null;
 };
 
 export type NutritionRecommendation = {
@@ -41,8 +42,15 @@ export function calculateNutritionRecommendation(
   }
 
   const bmi = (profile.weightLb / (profile.heightInches * profile.heightInches)) * 703;
-  const calorieMultiplier = bmi < 20 ? 18 : bmi <= 27 ? 16 : 14;
-  const dailyCalorieGoal = roundToNearest(profile.weightLb * calorieMultiplier, 50);
+  const kilograms = profile.weightLb * 0.45359237;
+  const centimeters = profile.heightInches * 2.54;
+  const age = profile.age ?? 25;
+  const gender = profile.gender?.toLowerCase();
+  const sexAdjustment = gender === "female" ? -161 : gender === "male" ? 5 : -78;
+  const restingEnergy = 10 * kilograms + 6.25 * centimeters - 5 * age + sexAdjustment;
+  const activityFactors: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, very_active: 1.725 };
+  const activityFactor = activityFactors[profile.activityLevel ?? "moderate"] ?? 1.55;
+  const dailyCalorieGoal = roundToNearest(restingEnergy * activityFactor, 50);
   const dailyProteinGoal = Math.round(profile.weightLb * 0.9);
   const dailyFatGoal = Math.round(profile.weightLb * 0.35);
   const proteinCalories = dailyProteinGoal * 4;
@@ -53,8 +61,6 @@ export function calculateNutritionRecommendation(
   );
   const dailyFiberGoal = Math.max(25, Math.round((dailyCalorieGoal / 1000) * 14));
   const dailyWaterGoal = Math.round(profile.weightLb * 0.67);
-  const gender = profile.gender?.toLowerCase();
-  const age = profile.age ?? 25;
   const isFemale = gender === "female";
   const isMale = gender === "male";
   const olderAdult = age >= 51;

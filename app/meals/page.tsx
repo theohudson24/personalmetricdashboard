@@ -6,6 +6,7 @@ import { MealHistory } from "@/components/meals/MealHistory";
 import { MicronutrientGrid } from "@/components/meals/MicronutrientGrid";
 import { NutritionInsights } from "@/components/meals/NutritionInsights";
 import { SavedMeals } from "@/components/meals/SavedMeals";
+import { QuickLogHistory } from "@/components/meals/QuickLogHistory";
 import { calculateNutritionTotals, nutritionInsights } from "@/lib/nutrition";
 import { prisma } from "@/lib/prisma";
 import { startOfDay } from "@/lib/dates";
@@ -18,7 +19,7 @@ export default async function MealsPage() {
   const profile = await getDefaultProfile();
 
   const today = startOfDay();
-  const [settings, meals, templates] = await Promise.all([
+  const [settings, meals, templates, recentEntries] = await Promise.all([
     prisma.userSettings.findUniqueOrThrow({ where: { profileId: profile.id } }),
     prisma.meal.findMany({
       where: { date: today, profileId: profile.id },
@@ -26,6 +27,7 @@ export default async function MealsPage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.mealTemplate.findMany({ where: { profileId: profile.id }, include: { foodItems: true }, orderBy: { updatedAt: "desc" } }),
+    prisma.meal.findMany({ where: { profileId: profile.id }, include: { foodItems: true }, orderBy: { createdAt: "desc" }, take: 30 }),
   ]);
   const totals = calculateNutritionTotals(meals.flatMap((meal) => meal.foodItems));
 
@@ -46,6 +48,7 @@ export default async function MealsPage() {
           </div>
         </div>
         <MealHistory meals={meals} />
+        <QuickLogHistory entries={recentEntries} />
         <SavedMeals templates={templates} />
       </div>
     </div>

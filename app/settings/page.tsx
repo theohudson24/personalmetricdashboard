@@ -8,6 +8,7 @@ import { calculateNutritionRecommendation } from "@/lib/recommendations";
 import { requireUser } from "@/lib/auth";
 import { AccountSettings } from "@/components/settings/AccountSettings";
 import { StrongImport } from "@/components/settings/StrongImport";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
         description="Set your body profile, nutrition targets, and display preference."
       />
       <div className="grid gap-5">
-        <AccountSettings account={{ displayName: profile.displayName, email: user.email ?? "", phone: user.phone ?? "" }} />
+        <AccountSettings account={{ displayName: profile.displayName, email: user.email ?? "", phone: profile.phone ?? user.phone ?? "" }} />
         <NutritionGoalsForm
           settings={settings}
           profile={profile}
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
         />
         <ThemePreference />
         <StrongImport />
+        <Link href="/report-bug" className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white/[0.07] px-4 text-sm font-medium text-ink">Report a bug</Link>
       </div>
     </div>
   );

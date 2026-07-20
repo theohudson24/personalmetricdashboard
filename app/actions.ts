@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
 import { inferExerciseDetails } from "@/lib/exerciseCatalog";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
+import { normalizeBarcode } from "@/lib/foodDataCentral";
 
 const defaultTodos = [
   "Log morning body weight",
@@ -326,8 +327,11 @@ export async function createBodyMeasurement(formData: FormData) {
 
 export async function createMeal(formData: FormData) {
   const profile = await getDefaultProfile();
-  const mealName = stringValue(formData, "mealName", "Meal");
+  const entryKind = ["MEAL", "ITEM", "DRINK", "SNACK"].includes(stringValue(formData, "entryKind")) ? stringValue(formData, "entryKind") : "MEAL";
   const itemNames = formData.getAll("foodName").map(String);
+  const barcodes = formData.getAll("foodBarcode").map((value) => normalizeBarcode(String(value)));
+  const brands = formData.getAll("foodBrand").map(String);
+  const grams = formData.getAll("foodGrams").map(Number);
 
   const foodItems = itemNames
     .map((name, index) => ({
@@ -355,6 +359,7 @@ export async function createMeal(formData: FormData) {
   if (foodItems.length === 0) {
     return;
   }
+  const mealName = entryKind === "MEAL" ? stringValue(formData, "mealName", "Meal") : foodItems[0].name;
 
   await prisma.meal.create({
     data: {
@@ -362,13 +367,34 @@ export async function createMeal(formData: FormData) {
       profileId: profile.id,
       mealType: stringValue(formData, "mealType", "BREAKFAST") as MealType,
       mealName,
+      entryKind,
       time: optionalString(formData, "time"),
       notes: optionalString(formData, "notes"),
       foodItems: { create: foodItems },
     },
   });
 
-  if (formData.get("saveAsTemplate") === "on") {
+  await Promise.all(foodItems.map(async (item, index) => {
+    const barcode = barcodes[index];
+    const weight = grams[index];
+    if (!barcode || !Number.isFinite(weight) || weight <= 0) return;
+    const per100 = (value: number) => Number(((value * 100) / weight).toFixed(4));
+    const saved = {
+      name: item.name, brand: brands[index] || null, source: "User corrected",
+      servingGrams: weight, servingLabel: item.servingSize,
+      calories: per100(item.calories), protein: per100(item.protein), carbs: per100(item.carbs),
+      fat: per100(item.fat), fiber: per100(item.fiber), sugar: per100(item.sugar),
+      sodium: per100(item.sodium), vitaminA: per100(item.vitaminA), vitaminC: per100(item.vitaminC),
+      vitaminD: per100(item.vitaminD), vitaminB12: per100(item.vitaminB12), calcium: per100(item.calcium),
+      iron: per100(item.iron), magnesium: per100(item.magnesium), potassium: per100(item.potassium), zinc: per100(item.zinc),
+    };
+    await prisma.savedFood.upsert({
+      where: { profileId_barcode: { profileId: profile.id, barcode } },
+      create: { profileId: profile.id, barcode, ...saved }, update: saved,
+    });
+  }));
+
+  if (entryKind === "MEAL" && formData.get("saveAsTemplate") === "on") {
     await prisma.mealTemplate.deleteMany({ where: { profileId: profile.id, name: mealName } });
     await prisma.mealTemplate.create({
       data: {
@@ -410,6 +436,22 @@ export async function reuseMealTemplate(formData: FormData) {
   revalidatePath("/meals");
 }
 
+export async function reuseLoggedEntry(formData: FormData) {
+  const profile = await getDefaultProfile();
+  const id = stringValue(formData, "id");
+  if (!id) return;
+  const previous = await prisma.meal.findFirst({ where: { id, profileId: profile.id }, include: { foodItems: true } });
+  if (!previous) return;
+  await prisma.meal.create({
+    data: {
+      profileId: profile.id, date: startOfDay(), mealType: previous.mealType,
+      mealName: previous.mealName, entryKind: previous.entryKind, time: previous.time, notes: previous.notes,
+      foodItems: { create: previous.foodItems.map(({ name, servingSize, calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, vitaminD, vitaminB12, calcium, iron, magnesium, potassium, zinc }) => ({ name, servingSize, calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, vitaminD, vitaminB12, calcium, iron, magnesium, potassium, zinc })) },
+    },
+  });
+  revalidatePath("/meals");
+}
+
 export async function deleteMeal(formData: FormData) {
   const profile = await getDefaultProfile();
   const id = stringValue(formData, "id");
@@ -446,6 +488,7 @@ export async function updateSettings(formData: FormData) {
   const weightLb = optionalNumber(formData, "weightLb");
   const age = optionalNumber(formData, "age");
   const gender = stringValue(formData, "gender");
+  const activityLevel = stringValue(formData, "activityLevel", "moderate");
   const heightInches =
     heightFeet !== null || heightInchesRemainder !== null
       ? (heightFeet ?? 0) * 12 + (heightInchesRemainder ?? 0)
@@ -458,6 +501,7 @@ export async function updateSettings(formData: FormData) {
           weightLb,
           age: age !== null ? Math.round(age) : null,
           gender: gender || null,
+          activityLevel,
         },
       })
     : profile;

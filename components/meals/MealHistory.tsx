@@ -9,7 +9,7 @@ type MealWithItems = Meal & { foodItems: FoodItem[] };
 export function MealHistory({ meals }: { meals: MealWithItems[] }) {
   return (
     <Card>
-      <CardHeader title="Meals logged" description="Food entries for the current day." />
+      <CardHeader title="Food and drinks logged" description="Items, drinks, snacks, and meals for the current day." />
       <div className="space-y-3">
         {meals.length === 0 ? (
           <EmptyState message="No meals logged for today yet." />
@@ -25,7 +25,7 @@ export function MealHistory({ meals }: { meals: MealWithItems[] }) {
                     <div>
                       <p className="font-medium">{meal.mealName}</p>
                       <p className="text-sm text-muted">
-                        {meal.mealType.replace("_", " ").toLowerCase()} {meal.time ? `/ ${meal.time}` : ""}
+                        {meal.entryKind.toLowerCase()} · {meal.mealType.replace("_", " ").toLowerCase()} {meal.time ? `/ ${meal.time}` : ""}
                       </p>
                     </div>
                     <p className="text-sm text-muted">

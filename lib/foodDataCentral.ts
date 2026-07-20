@@ -26,6 +26,9 @@ export type FoodSearchResult = {
   barcode?: string;
   servingGrams?: number;
   servingLabel?: string;
+  source?: "Saved by you" | "Open Food Facts" | "USDA FoodData Central";
+  confidence?: "complete" | "partial" | "missing";
+  missingNutrients?: string[];
 };
 
 type FdcNutrient = {
@@ -73,6 +76,32 @@ const emptyNutrition: FoodNutrition = {
   potassium: 0,
   zinc: 0,
 };
+
+const primaryNutrients: Array<keyof FoodNutrition> = ["calories", "protein", "carbs", "fat"];
+
+export function nutritionQuality(nutrition: FoodNutrition) {
+  const missingNutrients = (Object.keys(nutrition) as Array<keyof FoodNutrition>)
+    .filter((key) => !Number.isFinite(nutrition[key]) || nutrition[key] <= 0);
+  const missingPrimary = primaryNutrients.filter((key) => missingNutrients.includes(key));
+  const confidence = missingPrimary.length === primaryNutrients.length
+    ? "missing"
+    : missingPrimary.length > 0 || missingNutrients.length > 8
+      ? "partial"
+      : "complete";
+  return { confidence, missingNutrients } as const;
+}
+
+export function normalizeBarcode(raw: string) {
+  return raw.replace(/\D/g, "");
+}
+
+export function barcodeVariants(raw: string) {
+  const barcode = normalizeBarcode(raw);
+  const variants = new Set([barcode]);
+  if (barcode.length === 12) variants.add(`0${barcode}`);
+  if (barcode.length === 13 && barcode.startsWith("0")) variants.add(barcode.slice(1));
+  return [...variants].filter((value) => value.length >= 8 && value.length <= 14);
+}
 
 function nutrientNumber(nutrient: FdcNutrient) {
   return nutrient.nutrientNumber ?? String(nutrient.nutrientId ?? "");

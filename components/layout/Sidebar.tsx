@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Dumbbell, Flame, Home, Settings, TrendingUp, Utensils } from "lucide-react";
+import { Activity, Bug, Dumbbell, Flame, Home, Settings, TrendingUp, Utensils } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -52,7 +52,8 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-auto border-t border-white/10 pt-5 text-xs leading-5 text-white/55">
-          Local-first tracking for training, nutrition, recovery, and daily execution.
+          <Link href="/report-bug" className="mb-3 flex min-h-11 items-center gap-2 rounded-md px-3 text-white/70 hover:bg-white/10 hover:text-white"><Bug size={16}/>Report a bug</Link>
+          Private tracking for training, nutrition, recovery, and daily execution.
         </div>
       </div>
     </aside>
