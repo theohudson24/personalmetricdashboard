@@ -1,13 +1,13 @@
 import { Lightbulb, LockKeyhole, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardHeader } from "@/components/ui/Card";
-import { CategoryGrid } from "@/components/ascension/CategoryGrid";
-import { DailyImprovementChecklist } from "@/components/ascension/DailyImprovementChecklist";
-import { ImprovementGoals } from "@/components/ascension/ImprovementGoals";
-import { RoutineBuilder } from "@/components/ascension/RoutineBuilder";
-import { SafetyNotice } from "@/components/ascension/SafetyNotice";
-import { SelfImprovementOverview } from "@/components/ascension/SelfImprovementOverview";
-import { WeeklyImprovementReview } from "@/components/ascension/WeeklyImprovementReview";
+import { CategoryGrid } from "@/components/self-improvement/CategoryGrid";
+import { DailyImprovementChecklist } from "@/components/self-improvement/DailyImprovementChecklist";
+import { ImprovementGoals } from "@/components/self-improvement/ImprovementGoals";
+import { RoutineBuilder } from "@/components/self-improvement/RoutineBuilder";
+import { SafetyNotice } from "@/components/self-improvement/SafetyNotice";
+import { SelfImprovementOverview } from "@/components/self-improvement/SelfImprovementOverview";
+import { WeeklyImprovementReview } from "@/components/self-improvement/WeeklyImprovementReview";
 import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
 import { defaultChecklist, improvementCategories, todayUtc, weekStartUtc } from "@/lib/selfImprovement";
@@ -22,10 +22,10 @@ export default async function SelfImprovementPage() {
   const [todayItems, weekItems, goals, routines, review, metrics] = await Promise.all([
     prisma.selfImprovementChecklistItem.findMany({where:{profileId:profile.id,date:today},orderBy:{createdAt:"asc"}}),
     prisma.selfImprovementChecklistItem.findMany({where:{profileId:profile.id,date:{gte:weekAgo,lte:today}}}),
-    prisma.ascensionGoal.findMany({where:{profileId:profile.id,status:{not:"Archived"}},orderBy:{updatedAt:"desc"}}),
+    prisma.selfImprovementGoal.findMany({where:{profileId:profile.id,status:{not:"Archived"}},orderBy:{updatedAt:"desc"}}),
     prisma.selfImprovementRoutine.findMany({where:{profileId:profile.id,archived:false},include:{tasks:true},orderBy:{createdAt:"desc"}}),
     prisma.selfImprovementWeeklyReview.findUnique({where:{profileId_weekStart:{profileId:profile.id,weekStart:weekStartUtc()}}}),
-    prisma.ascensionMetric.findMany({where:{profileId:profile.id},orderBy:{updatedAt:"desc"},take:6}),
+    prisma.selfImprovementMetric.findMany({where:{profileId:profile.id},orderBy:{updatedAt:"desc"},take:6}),
   ]);
   const completion=todayItems.length?Math.round(todayItems.filter(i=>i.completed).length/todayItems.length*100):0;
   const weeklyConsistency=weekItems.length?Math.round(weekItems.filter(i=>i.completed).length/weekItems.length*100):completion;

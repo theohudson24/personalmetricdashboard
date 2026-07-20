@@ -1,267 +1,125 @@
 # Personal Metric Dashboard
 
-A clean, local-first health and gym progress tracker built with Next.js, React, TypeScript, Tailwind CSS, Prisma, and SQLite.
+A private, account-based dashboard for habits, training, nutrition, and self-improvement. The application is built for a small allowlisted beta and stores each tester's records under their authenticated Supabase profile.
 
-The app is designed as a minimal personal command center for daily health habits, lifting progress, meals, macros, micronutrients, and future device integrations. It uses a restrained black, white, and gray interface intended to look calm on a desktop while remaining usable on mobile.
+- **Status:** Private beta
+- **Production:** [personalmetricdashboard.vercel.app](https://personalmetricdashboard.vercel.app)
+- **Owner:** [Theo Hudson](https://github.com/theohudson24)
 
-## Features
+## Capabilities
 
-- Responsive desktop and mobile layout
-- Home dashboard with daily summary, to-dos, health markers, and progress preview
-- Daily habit checklist with add, delete, complete, and reset actions
-- Health marker logging by date
-- Workout logger with exercises, sets, reps, weight, and notes
-- Workout history with detail expansion and total volume
-- Exercise progress cards with best weight, best reps, estimated one-rep max, and volume
-- Strong CSV workout import into the local database
-- Profile-linked workout storage for imported and manually logged sessions
-- Exercise catalog for faster workout selection
-- Personal workout templates created from your own logged workouts
-- Body measurement tracking with a placeholder for future progress photos
-- Meal logger with food items, calories, macros, and micronutrients
-- USDA FoodData Central food search for auto-filling nutrition by weighed grams
-- Macro summary with neutral progress bars
-- Nutrition goal editing from Meals and Settings
-- Height/weight-based nutrition goal estimates with optional custom overrides
-- Rule-based training and nutrition insights
-- Local SQLite persistence through Prisma
-- API route scaffolding for future integrations
+- Daily dashboard, tasks, health markers, and progress summaries
+- Cross-device habit tracking and completion history
+- Workout logging, templates, progress insights, and Strong CSV import
+- Meal, snack, drink, and individual-item logging
+- USDA FoodData Central search and UPC/EAN barcode lookup
+- Saved meals, recent-food history, and editable nutrition targets
+- Self-improvement goals, routines, checklists, and weekly reviews
+- Light and dark themes, profile settings, and account controls
+- Bug reports, privacy-filtered error monitoring, and a private admin console
+- User data export as ZIP with JSON and CSV files
+- Administrator-reviewed account deletion requests
 
-## Tech Stack
+## Technology
 
-- Next.js App Router
-- React
-- TypeScript
-- Tailwind CSS
-- Prisma ORM
-- SQLite
-- Lucide React icons
+- Next.js App Router, React, TypeScript, and Tailwind CSS
+- Prisma ORM with Supabase PostgreSQL
+- Supabase Auth with server-side sessions
+- Vercel deployments from GitHub
+- Zod validation, ZXing barcode scanning, and Node's test runner through `tsx`
 
-## Getting Started
+## Local Development
 
-Install dependencies:
+Requirements:
+
+- Node.js 22 or newer
+- npm
+- Access to the project's Supabase development configuration
+
+Install and configure:
 
 ```bash
 npm install
-```
-
-Create the local environment file:
-
-```bash
 cp .env.example .env
-```
-
-Initialize the local SQLite database:
-
-```bash
-npm run db:init
-```
-
-Seed default settings and today's checklist:
-
-```bash
-npm run db:seed
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Open:
-
-```txt
-http://localhost:3000
-```
-
-## Scripts
-
-```bash
-npm run dev
-```
-
-Runs the local development server.
-
-```bash
-npm run build
-```
-
-Generates Prisma Client and creates a production Next.js build.
-
-```bash
-npm run start
-```
-
-Starts the production server after a build.
-
-```bash
-npm run lint
-```
-
-Runs ESLint.
-
-```bash
-npm run db:init
-```
-
-Creates the local SQLite tables used by the app.
-
-```bash
-npm run db:seed
-```
-
-Creates default nutrition settings and today's default checklist.
-
-```bash
-npm run import:strong
-```
-
-Imports `imports/strong_workouts.csv` into the local database, attaches workouts to the default profile, preserves Strong workout variables, and adds imported exercises to the exercise catalog.
-
-```bash
-npm run profile:normalize
-```
-
-Ensures local data is attached to one default profile and removes duplicate local profile/settings rows if setup scripts are run more than once.
-
-```bash
 npm run db:push
+npm run dev
 ```
 
-Runs Prisma `db push`. If Prisma's schema engine fails on your machine, use `npm run db:init`, which initializes the same MVP schema through Prisma's runtime connection.
+Open `http://localhost:3000`.
+
+Never commit `.env`, database credentials, exported workout files, or real user data. The committed `.env.example` contains placeholders only.
+
+## Environment Variables
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_DATABASE_URL` | Pooled PostgreSQL connection used by the application |
+| `SUPABASE_DIRECT_URL` | Direct PostgreSQL connection used for schema operations |
+| `NEXT_PUBLIC_SUPABASE_URL` | Public Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public browser-safe Supabase key |
+| `FDC_API_KEY` | USDA FoodData Central API key |
+| `TEST_USER_EMAILS` | Comma-separated private-beta allowlist |
+| `ADMIN_EMAILS` | Comma-separated administrator allowlist |
+
+The Supabase service-role key is not used by this application and must never be exposed to the browser.
+
+## Commands
 
 ```bash
+npm run dev          # Start the development server
+npm run build        # Generate Prisma Client and build for production
+npm run start        # Start a completed production build
+npm run lint         # Run ESLint
+npm test             # Run automated tests
+npm run db:push      # Apply the Prisma schema to the configured database
+npm run db:verify    # Verify connectivity and count core records
 npm run prisma:studio
 ```
 
-Opens Prisma Studio for local database inspection.
+`db:push` changes the configured database. Confirm the target connection before running it.
 
-## Routes
+## Repository Structure
 
-- `/` - Home dashboard
-- `/gym` - Workout logging, history, progress, and body measurements
-- `/meals` - Meal logging, macro summary, micronutrients, goals, and insights
-- `/settings` - Daily nutrition and water goal settings
-
-## API Routes
-
-- `/api/daily-log`
-- `/api/todos`
-- `/api/workouts`
-- `/api/meals`
-- `/api/settings`
-
-The app currently uses server actions for the UI, while these API routes provide expansion points for external clients, future Bluetooth/device sync, or health platform integrations.
-
-## Project Structure
-
-```txt
-app/
-  api/
-  gym/
-  meals/
-  settings/
-  actions.ts
-  globals.css
-  layout.tsx
-  page.tsx
-components/
-  dashboard/
-  gym/
-  layout/
-  meals/
-  shared/
-  ui/
-lib/
-  dates.ts
-  forms.ts
-  insights.ts
-  nutrition.ts
-  prisma.ts
-  workouts.ts
-prisma/
-  init.ts
-  schema.prisma
-  seed.ts
-types/
+```text
+app/                    Next.js pages, API routes, and server actions
+components/             Feature and shared UI components
+lib/                    Authentication, domain logic, integrations, and utilities
+prisma/schema.prisma    PostgreSQL data model
+public/                 Static application assets
+tests/                  Automated security and domain tests
+types/                  Shared TypeScript types
 ```
 
-## Local Data and Secrets
+The Self-improvement feature is organized consistently under `/self-improvement`, including its routes, actions, components, Prisma models, and production tables.
 
-The app stores local data in SQLite. Environment files and database files are intentionally ignored by Git:
+## Security Model
 
-- `.env`
-- `.env.local`
-- `prisma/dev.db`
-- `*.db`
-- `imports/*`
+- Supabase Auth establishes the current user on the server.
+- Private pages and APIs require authentication.
+- Queries resolve and constrain records through the authenticated profile.
+- Private beta and administrator access use separate email allowlists.
+- Inputs are validated before database writes.
+- Environment files and personal imports are ignored by Git.
+- Error monitoring intentionally excludes form values, health details, passwords, and stack traces.
+- Account deletion is reviewed manually; approval alone does not destroy data.
 
-Use `.env.example` as the safe template for local setup.
+See [SECURITY.md](SECURITY.md) for reporting and operational guidance.
 
-## Food Lookup
+Repository contributions follow [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Published changes are summarized in [CHANGELOG.md](CHANGELOG.md), and private-beta help is described in [SUPPORT.md](SUPPORT.md).
 
-The meal logger can search USDA FoodData Central. Type a food, enter the weighed amount in grams, choose the matching food result, and the app scales macros and micronutrients into the editable fields.
+This repository is publicly viewable but proprietary. See [LICENSE](LICENSE) for usage restrictions.
 
-Set a FoodData Central API key in `.env`:
+## Development Workflow
 
-```txt
-FDC_API_KEY="your_api_key_here"
-```
+1. Branch from an up-to-date `main`.
+2. Make one focused change.
+3. Run `npm test`, `npm run lint`, and `npm run build`.
+4. Push the branch and verify its Vercel Preview.
+5. Squash-merge the pull request after review.
+6. Confirm the production deployment and core authenticated flows.
 
-If no key is set, the app falls back to USDA's `DEMO_KEY`, which has low request limits.
+Production deploys automatically from `main`. Feature branches create preview deployments.
 
-## Strong Workout Import
+## Health Information
 
-Place your Strong export at:
-
-```txt
-imports/strong_workouts.csv
-```
-
-Then run:
-
-```bash
-npm run db:init
-npm run db:seed
-npm run import:strong
-npm run profile:normalize
-```
-
-The importer maps Strong data into:
-
-- `Profile`
-- `Workout`
-- `Exercise`
-- `ExerciseSet`
-- `ExerciseCatalog`
-
-Imported fields include workout date, workout name, duration, exercise name, set order, weight, reps, distance, seconds, notes, workout notes, and RPE.
-
-## Workout Templates
-
-The gym logger starts closed by default. From the Gym page, you can start a blank workout or choose one of your saved templates.
-
-No templates are seeded automatically. Templates are created only when you log a workout and choose to save it as a template.
-
-## Nutrition Estimates
-
-Settings can store profile height and weight, then estimate default nutrition targets from common fitness heuristics. The user can save the recommended estimate or override it with custom calorie, macro, fiber, and water goals.
-
-## Future Expansion
-
-The codebase is structured so later versions can add:
-
-- Bluetooth smart ring or scale sync
-- Heart rate and sleep tracker integrations
-- Apple Health or Google Fit import
-- Food database search
-- Barcode scanning
-- Progress photo uploads
-- Workout and meal templates
-- Advanced charts and weekly reports
-- AI-assisted recommendations
-
-## Design Notes
-
-The visual system intentionally avoids neon colors, glowing cards, heavy gradients, glassmorphism, and overdesigned dashboard effects. The interface uses neutral color, thin borders, simple spacing, and readable forms to feel like a focused personal operating system for health and fitness.
+Nutrition and self-improvement outputs are estimates and general recommendations. They are not medical advice and should not replace guidance from a qualified healthcare professional.

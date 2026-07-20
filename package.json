@@ -1,20 +1,29 @@
 {
-  "name": "personalmetricdashboard",
+  "name": "personal-metric-dashboard",
   "version": "0.1.0",
+  "description": "A secure private-beta dashboard for habits, training, nutrition, and self-improvement.",
   "private": true,
+  "author": "Theo Hudson",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theohudson24/personalmetricdashboard.git"
+  },
+  "homepage": "https://personalmetricdashboard.vercel.app",
+  "bugs": {
+    "url": "https://github.com/theohudson24/personalmetricdashboard/issues"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx --test tests/**/*.test.ts",
+    "test": "tsx --test tests/*.test.ts",
     "db:push": "prisma db push",
     "db:verify": "tsx prisma/verify-remote.ts",
-    "db:dedupe-todos": "tsx prisma/dedupe-todos.ts",
-    "db:init": "tsx prisma/init.ts",
-    "db:seed": "tsx prisma/seed.ts",
-    "import:strong": "tsx prisma/import-strong.ts",
-    "profile:normalize": "tsx prisma/normalize-profile.ts",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {

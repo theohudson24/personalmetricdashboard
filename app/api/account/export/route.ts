@@ -22,7 +22,7 @@ export async function GET() {
     prisma.savedFood.findMany({ where: { profileId: profile.id }, orderBy: { updatedAt: "desc" } }),
     prisma.workout.findMany({ where: { profileId: profile.id }, include: { exercises: { include: { sets: true } } }, orderBy: { date: "desc" } }),
     prisma.habit.findMany({ where: { profileId: profile.id }, include: { completions: true, relapses: true }, orderBy: { createdAt: "desc" } }),
-    prisma.ascensionGoal.findMany({ where: { profileId: profile.id }, orderBy: { createdAt: "desc" } }),
+    prisma.selfImprovementGoal.findMany({ where: { profileId: profile.id }, orderBy: { createdAt: "desc" } }),
     prisma.selfImprovementRoutine.findMany({ where: { profileId: profile.id }, include: { tasks: true }, orderBy: { createdAt: "desc" } }),
     prisma.selfImprovementChecklistItem.findMany({ where: { profileId: profile.id }, orderBy: { date: "desc" } }),
     prisma.selfImprovementWeeklyReview.findMany({ where: { profileId: profile.id }, orderBy: { weekStart: "desc" } }),

@@ -9,7 +9,7 @@ import { todayUtc, weekStartUtc } from "@/lib/selfImprovement";
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 const category = z.string().trim().min(1).max(100);
 const id = z.string().min(1).max(100);
-function refresh() { revalidatePath("/ascension"); revalidatePath("/self-improvement"); }
+function refresh() { revalidatePath("/self-improvement"); }
 
 export async function addImprovementChecklistItem(formData: FormData) {
   const profile = await getDefaultProfile();
@@ -33,17 +33,17 @@ export async function deleteImprovementChecklistItem(formData: FormData) {
 export async function createImprovementGoal(formData: FormData) {
   const profile = await getDefaultProfile(); const title = z.string().trim().min(1).max(200).parse(text(formData, "title"));
   const currentValue = Number(formData.get("baseline")) || 0; const targetValue = Number(formData.get("target")) || 100;
-  await prisma.ascensionGoal.create({ data: { profileId: profile.id, title, category: category.parse(text(formData, "category")), currentValue, targetValue, deadline: text(formData, "targetDate") ? new Date(`${text(formData, "targetDate")}T00:00:00.000Z`) : null, priority: z.enum(["Low", "Medium", "High"]).parse(text(formData, "priority")), progress: targetValue > 0 ? Math.max(0, Math.min(100, Math.round(currentValue / targetValue * 100))) : 0, linkedHabits: text(formData, "weeklyActions").slice(0, 1000), status: "Active", notes: [text(formData, "motivation"), text(formData, "notes")].filter(Boolean).join("\n\n").slice(0, 5000) } }); refresh();
+  await prisma.selfImprovementGoal.create({ data: { profileId: profile.id, title, category: category.parse(text(formData, "category")), currentValue, targetValue, deadline: text(formData, "targetDate") ? new Date(`${text(formData, "targetDate")}T00:00:00.000Z`) : null, priority: z.enum(["Low", "Medium", "High"]).parse(text(formData, "priority")), progress: targetValue > 0 ? Math.max(0, Math.min(100, Math.round(currentValue / targetValue * 100))) : 0, linkedHabits: text(formData, "weeklyActions").slice(0, 1000), status: "Active", notes: [text(formData, "motivation"), text(formData, "notes")].filter(Boolean).join("\n\n").slice(0, 5000) } }); refresh();
 }
 
 export async function setImprovementGoalStatus(formData: FormData) {
   const profile = await getDefaultProfile(); const goalId = id.parse(text(formData, "id"));
   const status = z.enum(["Not started", "Active", "Paused", "Completed", "Archived"]).parse(text(formData, "status"));
-  await prisma.ascensionGoal.updateMany({ where: { id: goalId, profileId: profile.id }, data: { status, ...(status === "Completed" ? { progress: 100 } : {}) } }); refresh();
+  await prisma.selfImprovementGoal.updateMany({ where: { id: goalId, profileId: profile.id }, data: { status, ...(status === "Completed" ? { progress: 100 } : {}) } }); refresh();
 }
 
 export async function deleteImprovementGoal(formData: FormData) {
-  const profile = await getDefaultProfile(); await prisma.ascensionGoal.deleteMany({ where: { id: id.parse(text(formData, "id")), profileId: profile.id } }); refresh();
+  const profile = await getDefaultProfile(); await prisma.selfImprovementGoal.deleteMany({ where: { id: id.parse(text(formData, "id")), profileId: profile.id } }); refresh();
 }
 
 export async function createImprovementRoutine(formData: FormData) {
