@@ -7,6 +7,7 @@ import { getDefaultProfile } from "@/lib/profile";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { importStrongCsv } from "@/lib/strongCsv";
+import { emailSet } from "@/lib/access";
 
 export type SettingsActionState = { status: "idle" | "success" | "error"; message: string };
 export const idleSettingsState: SettingsActionState = { status: "idle", message: "" };
@@ -34,7 +35,7 @@ export async function updateAccount(_state: SettingsActionState, formData: FormD
     if (!parsed.success) return { status: "error", message: "Check the account details and try again." };
     if (parsed.data.password && parsed.data.password.length < 12) return { status: "error", message: "A new password must be at least 12 characters." };
     const emailChanged = parsed.data.email.toLowerCase() !== user.email?.toLowerCase();
-    const allowedEmails = new Set((process.env.TEST_USER_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase()).filter(Boolean));
+    const allowedEmails = emailSet(process.env.TEST_USER_EMAILS);
     if (emailChanged && allowedEmails.size > 0 && !allowedEmails.has(parsed.data.email.toLowerCase())) {
       return { status: "error", message: "To prevent an account lockout during private testing, add the new email to TEST_USER_EMAILS in Vercel and redeploy before changing it here." };
     }

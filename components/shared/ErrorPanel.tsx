@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +12,13 @@ export function ErrorPanel({ error, reset, global = false }: { error: Error & { 
   const offline = typeof navigator !== "undefined" && !navigator.onLine;
   const task = pathname.startsWith("/meals") ? "nutrition data" : pathname.startsWith("/gym") ? "workout data" : pathname.startsWith("/settings") ? "account settings" : pathname.startsWith("/habits") ? "habit data" : "this page";
   const reportUrl = `/report-bug?page=${encodeURIComponent(pathname)}${error.digest ? `&reference=${encodeURIComponent(error.digest)}` : ""}`;
+
+  useEffect(() => {
+    if (offline) return;
+    const width = window.screen.width;
+    const deviceClass = width < 640 ? "mobile" : width < 1024 ? "tablet" : "desktop";
+    void fetch("/api/errors", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ route: pathname, category: "PAGE_LOAD", digest: error.digest, deviceClass }), keepalive: true });
+  }, [error.digest, offline, pathname]);
 
   return <div className={`${global ? "min-h-screen" : "min-h-[65vh]"} grid place-items-center p-5`}>
     <Card className="max-w-2xl text-center">
