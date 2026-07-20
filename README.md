@@ -32,7 +32,7 @@ A private, account-based dashboard for habits, training, nutrition, and self-imp
 
 Requirements:
 
-- Node.js 20 or newer
+- Node.js 22 or newer
 - npm
 - Access to the project's Supabase development configuration
 
