@@ -34,29 +34,32 @@ model UserSettings {
 }
 
 model Profile {
-  id               String             @id @default(cuid())
-  authUserId       String             @unique
-  displayName      String
-  isDefault        Boolean            @default(false)
-  heightInches     Float?
-  weightLb         Float?
-  age              Int?
-  gender           String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  settings         UserSettings?
-  workouts         Workout[]
-  workoutTemplates WorkoutTemplate[]
-  dailyLogs        DailyLog[]
-  todoItems        TodoItem[]
-  bodyMeasurements BodyMeasurement[]
-  meals            Meal[]
-  mealTemplates    MealTemplate[]
-  habits           Habit[]
-  ascensionGoals   AscensionGoal[]
-  ascensionMetrics AscensionMetric[]
-  ascensionChecks  AscensionCheckIn[]
-  ascensionPhotos  AscensionPhoto[]
+  id                   String                         @id @default(cuid())
+  authUserId           String                         @unique
+  displayName          String
+  isDefault            Boolean                        @default(false)
+  heightInches         Float?
+  weightLb             Float?
+  age                  Int?
+  gender               String?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  settings             UserSettings?
+  workouts             Workout[]
+  workoutTemplates     WorkoutTemplate[]
+  dailyLogs            DailyLog[]
+  todoItems            TodoItem[]
+  bodyMeasurements     BodyMeasurement[]
+  meals                Meal[]
+  mealTemplates        MealTemplate[]
+  habits               Habit[]
+  ascensionGoals       AscensionGoal[]
+  ascensionMetrics     AscensionMetric[]
+  ascensionChecks      AscensionCheckIn[]
+  ascensionPhotos      AscensionPhoto[]
+  improvementRoutines  SelfImprovementRoutine[]
+  improvementChecklist SelfImprovementChecklistItem[]
+  improvementReviews   SelfImprovementWeeklyReview[]
 }
 
 model Habit {
@@ -191,6 +194,70 @@ model AscensionPhoto {
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, date])
+}
+
+model SelfImprovementRoutine {
+  id               String                       @id @default(cuid())
+  profileId        String
+  name             String
+  category         String
+  frequency        String
+  preferredTime    String?
+  estimatedMinutes Int                          @default(10)
+  notes            String?
+  archived         Boolean                      @default(false)
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  profile          Profile                      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  tasks            SelfImprovementRoutineTask[]
+
+  @@index([profileId, archived])
+}
+
+model SelfImprovementRoutineTask {
+  id         String                 @id @default(cuid())
+  routineId  String
+  title      String
+  orderIndex Int
+  completed  Boolean                @default(false)
+  routine    SelfImprovementRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId, orderIndex])
+}
+
+model SelfImprovementChecklistItem {
+  id        String   @id @default(cuid())
+  profileId String
+  date      DateTime
+  title     String
+  category  String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date, title])
+  @@index([profileId, date])
+}
+
+model SelfImprovementWeeklyReview {
+  id                 String   @id @default(cuid())
+  profileId          String
+  weekStart          DateTime
+  wentWell           String
+  difficult          String
+  improvedCategory   String
+  attentionCategory  String
+  confidence         Int
+  positiveDifference String
+  adjustment         String
+  priorities         String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  profile            Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, weekStart])
+  @@index([profileId])
 }
 
 model DailyLog {

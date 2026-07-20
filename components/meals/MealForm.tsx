@@ -1,18 +1,21 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Plus, Search, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { createMeal } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { scaleNutrition, type FoodNutrition, type FoodSearchResult } from "@/lib/foodDataCentral";
+import { BarcodeLookup } from "@/components/meals/BarcodeLookup";
 
 type FoodDraft = FoodNutrition & {
   id: string;
   foodName: string;
   servingSize: string;
   grams: number;
+  servings: number;
+  gramsPerServing: number;
   selectedFood?: FoodSearchResult;
   searchResults: FoodSearchResult[];
   isSearching: boolean;
@@ -53,6 +56,8 @@ function newFoodDraft(): FoodDraft {
     foodName: "",
     servingSize: "",
     grams: 100,
+    servings: 1,
+    gramsPerServing: 100,
     searchResults: [],
     isSearching: false,
     ...emptyNutrition,
@@ -63,14 +68,27 @@ function nutrientValue(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
+function EditableNumberInput({ value, onValueChange, ...props }: Omit<ComponentProps<typeof Input>, "value" | "onChange"> & { value: number; onValueChange: (value: number) => void }) {
+  const [draft, setDraft] = useState(() => nutrientValue(value));
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) setDraft(nutrientValue(value));
+  }, [value]);
+
+  return <Input {...props} ref={inputRef} value={draft} onChange={(event) => { const next = event.target.value; setDraft(next); if (next !== "") onValueChange(Number(next)); }} onBlur={() => { if (draft === "" || !Number.isFinite(Number(draft))) { setDraft("0"); onValueChange(0); } else { const normalized = Number(draft); setDraft(nutrientValue(normalized)); onValueChange(normalized); } }} />;
+}
+
 function updatesForWeight(item: FoodDraft, grams: number): Partial<FoodDraft> {
+  const servings = item.gramsPerServing > 0 ? grams / item.gramsPerServing : 0;
   if (!item.selectedFood) {
-    return { grams, servingSize: `${grams} g` };
+    return { grams, servings, servingSize: `${grams} g` };
   }
 
   return {
     grams,
-    servingSize: `${grams} g`,
+    servings,
+    servingSize: `${Number(servings.toFixed(2))} serving(s) · ${grams} g`,
     ...scaleNutrition(item.selectedFood.nutrientsPer100g, grams),
   };
 }
@@ -107,12 +125,15 @@ export function MealForm() {
   }
 
   function applyFoodResult(item: FoodDraft, result: FoodSearchResult) {
-    const grams = item.grams > 0 ? item.grams : 100;
+    const gramsPerServing = result.servingGrams || 100;
+    const grams = gramsPerServing;
     const scaled = scaleNutrition(result.nutrientsPer100g, grams);
 
     updateItem(item.id, {
       foodName: result.description,
       servingSize: `${grams} g`,
+      servings: 1,
+      gramsPerServing,
       selectedFood: result,
       searchResults: [],
       ...scaled,
@@ -150,14 +171,17 @@ export function MealForm() {
           <Textarea name="notes" />
         </Field>
 
+        <BarcodeLookup onFound={(food) => applyFoodResult(items.find((item) => expandedIds.has(item.id)) ?? items[items.length - 1], food)} />
+
         <div className="space-y-4">
           {items.map((item, index) => (
             <div key={item.id} className="rounded-md border border-line bg-black/10 p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">Ingredient #{index + 1}</p>
                 <div className="flex gap-1">
-                <Button type="button" variant="ghost" className="h-10 w-10 p-0" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"}>
+                <Button type="button" variant="secondary" className="h-11 border-core/50 bg-core/10 px-3 text-core shadow-[0_0_18px_rgba(77,183,167,0.12)] hover:bg-core/20" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"} aria-expanded={expandedIds.has(item.id)}>
                   {expandedIds.has(item.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  <span className="ml-2">{expandedIds.has(item.id) ? "Collapse" : "Expand"}</span>
                 </Button>
                 <Button
                   type="button"
@@ -179,7 +203,7 @@ export function MealForm() {
 
               {expandedIds.has(item.id) ? <>
               <div className="mb-4 rounded-md border border-line bg-black/15 p-3">
-                <div className="grid gap-3 sm:grid-cols-[1fr_9rem_auto]">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_8rem_8rem_8rem_auto]">
                   <Field label="Ingredient">
                     <Input
                       value={item.foodName}
@@ -192,18 +216,19 @@ export function MealForm() {
                       placeholder="Ingredient Name"
                     />
                   </Field>
+                  <Field label="Servings">
+                    <EditableNumberInput type="number" min="0" step="0.1" value={Number(item.servings.toFixed(2))} onValueChange={(servings) => { const grams = servings * item.gramsPerServing; updateItem(item.id, { servings, grams, servingSize: `${servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...(item.selectedFood ? scaleNutrition(item.selectedFood.nutrientsPer100g, grams) : {}) }); }} />
+                  </Field>
+                  <Field label="g / serving">
+                    <EditableNumberInput type="number" min="0" step="0.1" value={item.gramsPerServing} onValueChange={(gramsPerServing) => { const grams = item.servings * gramsPerServing; updateItem(item.id, { gramsPerServing, grams, servingSize: `${item.servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...(item.selectedFood ? scaleNutrition(item.selectedFood.nutrientsPer100g, grams) : {}) }); }} />
+                  </Field>
                   <Field label="Weight g">
-                    <Input
+                    <EditableNumberInput
                       type="number"
                       min="0"
                       step="0.1"
                       value={item.grams}
-                      onChange={(event) =>
-                        updateItem(
-                          item.id,
-                          updatesForWeight(item, Number(event.target.value)),
-                        )
-                      }
+                      onValueChange={(value) => updateItem(item.id, updatesForWeight(item, value))}
                     />
                   </Field>
                   <Button
@@ -263,17 +288,13 @@ export function MealForm() {
                   ["zinc", "Zinc", "0.1"],
                 ].map(([name, label, step]) => (
                   <Field key={name} label={label}>
-                    <Input
+                    <EditableNumberInput
                       name={name}
                       type="number"
                       min="0"
                       step={step}
-                      value={nutrientValue(item[name as keyof FoodNutrition])}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          [name]: Number(event.target.value),
-                        } as Partial<FoodDraft>)
-                      }
+                      value={item[name as keyof FoodNutrition]}
+                      onValueChange={(value) => updateItem(item.id, { [name]: value } as Partial<FoodDraft>)}
                     />
                   </Field>
                 ))}
