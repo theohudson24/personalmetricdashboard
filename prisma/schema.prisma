@@ -412,82 +412,105 @@ model BodyMeasurement {
 }
 
 model Meal {
-  id        String     @id @default(cuid())
-  profileId String
-  date      DateTime
-  mealType  MealType
-  mealName  String
-  entryKind String     @default("MEAL")
-  time      String?
-  notes     String?
-  foodItems FoodItem[]
-  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  profileId       String
+  date            DateTime
+  dateKey         String?
+  timezone        String?
+  mealType        MealType
+  mealName        String
+  entryKind       String     @default("MEAL")
+  time            String?
+  notes           String?
+  clientRequestId String?
+  foodItems       FoodItem[]
+  profile         Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
+  @@unique([profileId, clientRequestId])
   @@index([date])
   @@index([profileId])
+  @@index([profileId, dateKey])
 }
 
 model FoodItem {
-  id          String   @id @default(cuid())
-  mealId      String
-  name        String
-  servingSize String?
-  calories    Int      @default(0)
-  protein     Float    @default(0)
-  carbs       Float    @default(0)
-  fat         Float    @default(0)
-  fiber       Float    @default(0)
-  sugar       Float    @default(0)
-  sodium      Float    @default(0)
-  vitaminA    Float    @default(0)
-  vitaminC    Float    @default(0)
-  vitaminD    Float    @default(0)
-  vitaminB12  Float    @default(0)
-  calcium     Float    @default(0)
-  iron        Float    @default(0)
-  magnesium   Float    @default(0)
-  potassium   Float    @default(0)
-  zinc        Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  meal        Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  mealId              String
+  name                String
+  brand               String?
+  barcode             String?
+  source              String   @default("Manual")
+  sourceId            String?
+  servingSize         String?
+  grams               Float    @default(100)
+  servings            Float    @default(1)
+  gramsPerServing     Float    @default(100)
+  referenceNutrition  Json?
+  nutritionConfidence String   @default("missing")
+  missingNutrients    String   @default("")
+  userEdited          Boolean  @default(false)
+  calories            Int      @default(0)
+  protein             Float    @default(0)
+  carbs               Float    @default(0)
+  fat                 Float    @default(0)
+  fiber               Float    @default(0)
+  sugar               Float    @default(0)
+  sodium              Float    @default(0)
+  vitaminA            Float    @default(0)
+  vitaminC            Float    @default(0)
+  vitaminD            Float    @default(0)
+  vitaminB12          Float    @default(0)
+  calcium             Float    @default(0)
+  iron                Float    @default(0)
+  magnesium           Float    @default(0)
+  potassium           Float    @default(0)
+  zinc                Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  meal                Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
 
   @@index([mealId])
 }
 
 model SavedFood {
-  id           String   @id @default(cuid())
-  profileId    String
-  barcode      String
-  name         String
-  brand        String?
-  source       String   @default("User corrected")
-  servingGrams Float    @default(100)
-  servingLabel String?
-  calories     Float    @default(0)
-  protein      Float    @default(0)
-  carbs        Float    @default(0)
-  fat          Float    @default(0)
-  fiber        Float    @default(0)
-  sugar        Float    @default(0)
-  sodium       Float    @default(0)
-  vitaminA     Float    @default(0)
-  vitaminC     Float    @default(0)
-  vitaminD     Float    @default(0)
-  vitaminB12   Float    @default(0)
-  calcium      Float    @default(0)
-  iron         Float    @default(0)
-  magnesium    Float    @default(0)
-  potassium    Float    @default(0)
-  zinc         Float    @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id               String    @id @default(cuid())
+  profileId        String
+  barcode          String
+  name             String
+  brand            String?
+  source           String    @default("User corrected")
+  servingGrams     Float     @default(100)
+  servingLabel     String?
+  sourceId         String?
+  confidence       String    @default("missing")
+  missingNutrients String    @default("")
+  userEdited       Boolean   @default(true)
+  useCount         Int       @default(0)
+  lastUsedAt       DateTime?
+  calories         Float     @default(0)
+  protein          Float     @default(0)
+  carbs            Float     @default(0)
+  fat              Float     @default(0)
+  fiber            Float     @default(0)
+  sugar            Float     @default(0)
+  sodium           Float     @default(0)
+  vitaminA         Float     @default(0)
+  vitaminC         Float     @default(0)
+  vitaminD         Float     @default(0)
+  vitaminB12       Float     @default(0)
+  calcium          Float     @default(0)
+  iron             Float     @default(0)
+  magnesium        Float     @default(0)
+  potassium        Float     @default(0)
+  zinc             Float     @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  profile          Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@unique([profileId, barcode])
   @@index([profileId, updatedAt])
+  @@index([profileId, lastUsedAt])
 }
 
 model BugReport {
@@ -544,42 +567,58 @@ model AccountDeletionRequest {
 }
 
 model MealTemplate {
-  id        String             @id @default(cuid())
-  profileId String
-  name      String
-  mealType  MealType
-  notes     String?
-  foodItems MealTemplateItem[]
-  profile   Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id         String             @id @default(cuid())
+  profileId  String
+  name       String
+  mealType   MealType
+  entryKind  String             @default("MEAL")
+  notes      String?
+  archived   Boolean            @default(false)
+  useCount   Int                @default(0)
+  lastUsedAt DateTime?
+  foodItems  MealTemplateItem[]
+  profile    Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   @@unique([profileId, name])
   @@index([profileId])
+  @@index([profileId, archived, lastUsedAt])
 }
 
 model MealTemplateItem {
-  id          String       @id @default(cuid())
-  templateId  String
-  name        String
-  servingSize String?
-  calories    Int          @default(0)
-  protein     Float        @default(0)
-  carbs       Float        @default(0)
-  fat         Float        @default(0)
-  fiber       Float        @default(0)
-  sugar       Float        @default(0)
-  sodium      Float        @default(0)
-  vitaminA    Float        @default(0)
-  vitaminC    Float        @default(0)
-  vitaminD    Float        @default(0)
-  vitaminB12  Float        @default(0)
-  calcium     Float        @default(0)
-  iron        Float        @default(0)
-  magnesium   Float        @default(0)
-  potassium   Float        @default(0)
-  zinc        Float        @default(0)
-  template    MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  id                  String       @id @default(cuid())
+  templateId          String
+  name                String
+  brand               String?
+  barcode             String?
+  source              String       @default("Manual")
+  sourceId            String?
+  servingSize         String?
+  grams               Float        @default(100)
+  servings            Float        @default(1)
+  gramsPerServing     Float        @default(100)
+  referenceNutrition  Json?
+  nutritionConfidence String       @default("missing")
+  missingNutrients    String       @default("")
+  userEdited          Boolean      @default(false)
+  calories            Int          @default(0)
+  protein             Float        @default(0)
+  carbs               Float        @default(0)
+  fat                 Float        @default(0)
+  fiber               Float        @default(0)
+  sugar               Float        @default(0)
+  sodium              Float        @default(0)
+  vitaminA            Float        @default(0)
+  vitaminC            Float        @default(0)
+  vitaminD            Float        @default(0)
+  vitaminB12          Float        @default(0)
+  calcium             Float        @default(0)
+  iron                Float        @default(0)
+  magnesium           Float        @default(0)
+  potassium           Float        @default(0)
+  zinc                Float        @default(0)
+  template            MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
 }

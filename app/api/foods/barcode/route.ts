@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 import {
   barcodeVariants,
   extractNutrition,
+  hasValidBarcodeCheckDigit,
   normalizeBarcode,
   nutritionQuality,
   type FoodNutrition,
   type FoodSearchResult,
 } from "@/lib/foodDataCentral";
+import { requireUser } from "@/lib/auth";
+import { allowRequest } from "@/lib/rateLimit";
 
 type Product = {
   product_name?: string;
@@ -36,7 +39,9 @@ function savedFoodResult(food: Awaited<ReturnType<typeof prisma.savedFood.findFi
     fdcId: Number(food.barcode.slice(-9)), description: food.name, brandOwner: food.brand ?? undefined,
     dataType: "Saved by you", source: "Saved by you", barcode: food.barcode,
     servingGrams: food.servingGrams, servingLabel: food.servingLabel ?? undefined,
-    nutrientsPer100g, ...nutritionQuality(nutrientsPer100g),
+    nutrientsPer100g,
+    confidence: food.confidence as FoodSearchResult["confidence"],
+    missingNutrients: food.missingNutrients.split(",").filter(Boolean),
   };
 }
 
@@ -44,6 +49,7 @@ async function openFoodFacts(barcodes: string[]): Promise<FoodSearchResult | nul
   for (const barcode of barcodes) {
     const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`, {
       headers: { "User-Agent": "MetricOS/1.0 (personal nutrition tracker)" },
+      signal: AbortSignal.timeout(8_000),
       next: { revalidate: 60 * 60 * 24 },
     });
     if (!response.ok) continue;
@@ -76,6 +82,7 @@ async function usdaBarcode(barcode: string): Promise<FoodSearchResult | null> {
   const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${apiKey}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query: barcode, pageSize: 5, dataType: ["Branded"] }),
+    signal: AbortSignal.timeout(8_000),
     next: { revalidate: 60 * 60 * 24 },
   });
   if (!response.ok) return null;
@@ -94,14 +101,18 @@ async function usdaBarcode(barcode: string): Promise<FoodSearchResult | null> {
 
 export async function GET(request: Request) {
   try {
+    const user = await requireUser();
+    const rate = allowRequest(`barcode:${user.id}`, 30, 60_000);
+    if (!rate.allowed) return NextResponse.json({ error: "Too many barcode lookups. Wait briefly and try again.", kind: "rate_limit" }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
     const profile = await getDefaultProfile();
     const raw = new URL(request.url).searchParams.get("barcode") ?? "";
+    if (!hasValidBarcodeCheckDigit(raw)) return NextResponse.json({ error: "Enter a valid UPC or EAN barcode, including its check digit.", kind: "input" }, { status: 400 });
     const variants = barcodeVariants(raw);
     if (variants.length === 0) return NextResponse.json({ error: "Enter a valid 8–14 digit barcode.", kind: "input" }, { status: 400 });
 
     const saved = await prisma.savedFood.findFirst({ where: { profileId: profile.id, barcode: { in: variants } }, orderBy: { updatedAt: "desc" } });
     const personal = savedFoodResult(saved);
-    if (personal) return NextResponse.json({ food: personal });
+    if (personal) return NextResponse.json({ food: personal }, { headers: { "Cache-Control": "private, no-store" } });
 
     let external = await openFoodFacts(variants).catch(() => null);
     if (!external) {
@@ -111,7 +122,7 @@ export async function GET(request: Request) {
       }
     }
     if (!external) return NextResponse.json({ error: "We could not find that product. Search by name or enter it manually, then it can be remembered for next time.", kind: "not_found" }, { status: 404 });
-    return NextResponse.json({ food: external });
+    return NextResponse.json({ food: external }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return NextResponse.json({ error: "Food lookup is temporarily unavailable on our end. We know about this type of issue and are working to keep lookups reliable.", kind: "server" }, { status: 503 });
   }

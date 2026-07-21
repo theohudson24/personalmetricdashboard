@@ -1,6 +1,6 @@
 "use server";
 
-import { MealType, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { parseDateInput, startOfDay } from "@/lib/dates";
 import {
@@ -13,7 +13,6 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
 import { inferExerciseDetails } from "@/lib/exerciseCatalog";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
-import { normalizeBarcode } from "@/lib/foodDataCentral";
 
 const defaultTodos = [
   "Log morning body weight",
@@ -323,160 +322,6 @@ export async function createBodyMeasurement(formData: FormData) {
   });
 
   revalidatePath("/gym");
-}
-
-export async function createMeal(formData: FormData) {
-  const profile = await getDefaultProfile();
-  const entryKind = ["MEAL", "ITEM", "DRINK", "SNACK"].includes(stringValue(formData, "entryKind")) ? stringValue(formData, "entryKind") : "MEAL";
-  const itemNames = formData.getAll("foodName").map(String);
-  const barcodes = formData.getAll("foodBarcode").map((value) => normalizeBarcode(String(value)));
-  const brands = formData.getAll("foodBrand").map(String);
-  const grams = formData.getAll("foodGrams").map(Number);
-
-  const foodItems = itemNames
-    .map((name, index) => ({
-      name: name.trim(),
-      servingSize: formData.getAll("servingSize").map(String)[index]?.trim() || null,
-      calories: Number(formData.getAll("calories").map(String)[index] || 0),
-      protein: Number(formData.getAll("protein").map(String)[index] || 0),
-      carbs: Number(formData.getAll("carbs").map(String)[index] || 0),
-      fat: Number(formData.getAll("fat").map(String)[index] || 0),
-      fiber: Number(formData.getAll("fiber").map(String)[index] || 0),
-      sugar: Number(formData.getAll("sugar").map(String)[index] || 0),
-      sodium: Number(formData.getAll("sodium").map(String)[index] || 0),
-      vitaminA: Number(formData.getAll("vitaminA").map(String)[index] || 0),
-      vitaminC: Number(formData.getAll("vitaminC").map(String)[index] || 0),
-      vitaminD: Number(formData.getAll("vitaminD").map(String)[index] || 0),
-      vitaminB12: Number(formData.getAll("vitaminB12").map(String)[index] || 0),
-      calcium: Number(formData.getAll("calcium").map(String)[index] || 0),
-      iron: Number(formData.getAll("iron").map(String)[index] || 0),
-      magnesium: Number(formData.getAll("magnesium").map(String)[index] || 0),
-      potassium: Number(formData.getAll("potassium").map(String)[index] || 0),
-      zinc: Number(formData.getAll("zinc").map(String)[index] || 0),
-    }))
-    .filter((item) => item.name);
-
-  if (foodItems.length === 0) {
-    return;
-  }
-  const mealName = entryKind === "MEAL" ? stringValue(formData, "mealName", "Meal") : foodItems[0].name;
-
-  await prisma.meal.create({
-    data: {
-      date: parseDateInput(formData.get("date")),
-      profileId: profile.id,
-      mealType: stringValue(formData, "mealType", "BREAKFAST") as MealType,
-      mealName,
-      entryKind,
-      time: optionalString(formData, "time"),
-      notes: optionalString(formData, "notes"),
-      foodItems: { create: foodItems },
-    },
-  });
-
-  await Promise.all(foodItems.map(async (item, index) => {
-    const barcode = barcodes[index];
-    const weight = grams[index];
-    if (!barcode || !Number.isFinite(weight) || weight <= 0) return;
-    const per100 = (value: number) => Number(((value * 100) / weight).toFixed(4));
-    const saved = {
-      name: item.name, brand: brands[index] || null, source: "User corrected",
-      servingGrams: weight, servingLabel: item.servingSize,
-      calories: per100(item.calories), protein: per100(item.protein), carbs: per100(item.carbs),
-      fat: per100(item.fat), fiber: per100(item.fiber), sugar: per100(item.sugar),
-      sodium: per100(item.sodium), vitaminA: per100(item.vitaminA), vitaminC: per100(item.vitaminC),
-      vitaminD: per100(item.vitaminD), vitaminB12: per100(item.vitaminB12), calcium: per100(item.calcium),
-      iron: per100(item.iron), magnesium: per100(item.magnesium), potassium: per100(item.potassium), zinc: per100(item.zinc),
-    };
-    await prisma.savedFood.upsert({
-      where: { profileId_barcode: { profileId: profile.id, barcode } },
-      create: { profileId: profile.id, barcode, ...saved }, update: saved,
-    });
-  }));
-
-  if (entryKind === "MEAL" && formData.get("saveAsTemplate") === "on") {
-    await prisma.mealTemplate.deleteMany({ where: { profileId: profile.id, name: mealName } });
-    await prisma.mealTemplate.create({
-      data: {
-        profileId: profile.id,
-        name: mealName,
-        mealType: stringValue(formData, "mealType", "BREAKFAST") as MealType,
-        notes: optionalString(formData, "notes"),
-        foodItems: { create: foodItems },
-      },
-    });
-  }
-
-  revalidateApp();
-}
-
-export async function reuseMealTemplate(formData: FormData) {
-  const profile = await getDefaultProfile();
-  const id = stringValue(formData, "id");
-  if (!id) return;
-  const template = await prisma.mealTemplate.findFirst({ where: { id, profileId: profile.id }, include: { foodItems: true } });
-  if (!template) return;
-  await prisma.meal.create({
-    data: {
-      profileId: profile.id,
-      date: startOfDay(),
-      mealType: template.mealType,
-      mealName: template.name,
-      notes: template.notes,
-      foodItems: { create: template.foodItems.map((item) => ({
-        name: item.name, servingSize: item.servingSize, calories: item.calories,
-        protein: item.protein, carbs: item.carbs, fat: item.fat, fiber: item.fiber,
-        sugar: item.sugar, sodium: item.sodium, vitaminA: item.vitaminA,
-        vitaminC: item.vitaminC, vitaminD: item.vitaminD, vitaminB12: item.vitaminB12,
-        calcium: item.calcium, iron: item.iron, magnesium: item.magnesium,
-        potassium: item.potassium, zinc: item.zinc,
-      })) },
-    },
-  });
-  revalidatePath("/meals");
-}
-
-export async function reuseLoggedEntry(formData: FormData) {
-  const profile = await getDefaultProfile();
-  const id = stringValue(formData, "id");
-  if (!id) return;
-  const previous = await prisma.meal.findFirst({ where: { id, profileId: profile.id }, include: { foodItems: true } });
-  if (!previous) return;
-  await prisma.meal.create({
-    data: {
-      profileId: profile.id, date: startOfDay(), mealType: previous.mealType,
-      mealName: previous.mealName, entryKind: previous.entryKind, time: previous.time, notes: previous.notes,
-      foodItems: { create: previous.foodItems.map(({ name, servingSize, calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, vitaminD, vitaminB12, calcium, iron, magnesium, potassium, zinc }) => ({ name, servingSize, calories, protein, carbs, fat, fiber, sugar, sodium, vitaminA, vitaminC, vitaminD, vitaminB12, calcium, iron, magnesium, potassium, zinc })) },
-    },
-  });
-  revalidatePath("/meals");
-}
-
-export async function deleteMeal(formData: FormData) {
-  const profile = await getDefaultProfile();
-  const id = stringValue(formData, "id");
-  if (!id) return;
-  await prisma.meal.deleteMany({ where: { id, profileId: profile.id } });
-  revalidateApp();
-}
-
-export async function updateMeal(formData: FormData) {
-  const profile = await getDefaultProfile();
-  const id = stringValue(formData, "id");
-  if (!id) return;
-  const names = formData.getAll("foodName").map(String);
-  const servings = formData.getAll("servingSize").map(String);
-  const calories = formData.getAll("calories").map(Number);
-  const protein = formData.getAll("protein").map(Number);
-  const foodItems = names.map((name, index) => ({ name: name.trim(), servingSize: servings[index] || null, calories: calories[index] || 0, protein: protein[index] || 0 })).filter((item) => item.name);
-  const ownedMeal = await prisma.meal.findFirst({ where: { id, profileId: profile.id }, select: { id: true } });
-  if (!ownedMeal) return;
-  await prisma.$transaction([
-    prisma.foodItem.deleteMany({ where: { mealId: id } }),
-    prisma.meal.updateMany({ where: { id, profileId: profile.id }, data: { mealName: stringValue(formData, "mealName", "Meal"), notes: optionalString(formData, "notes") } }),
-    prisma.foodItem.createMany({ data: foodItems.map((item) => ({ ...item, mealId: id })) }),
-  ]);
-  revalidateApp();
 }
 
 export async function updateSettings(formData: FormData) {
