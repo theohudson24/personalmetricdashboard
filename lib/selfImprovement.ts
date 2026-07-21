@@ -31,3 +31,27 @@ export const defaultChecklist = [
 
 export function todayUtc() { return startOfDay(new Date()); }
 export function weekStartUtc() { const date = todayUtc(); const day = date.getUTCDay(); date.setUTCDate(date.getUTCDate() - (day === 0 ? 6 : day - 1)); return date; }
+
+export function goalProgressPercent(baseline: number, current: number, target: number) {
+  if (![baseline, current, target].every(Number.isFinite)) return 0;
+  if (target === baseline) return current === target ? 100 : 0;
+  const progress = target > baseline
+    ? (current - baseline) / (target - baseline)
+    : (baseline - current) / (baseline - target);
+  return Math.max(0, Math.min(100, Math.round(progress * 100)));
+}
+
+export function goalPaceStatus({ progress, createdAt, deadline, now = new Date() }: { progress: number; createdAt: Date; deadline: Date | null; now?: Date }) {
+  if (progress >= 100) return "Completed";
+  if (!deadline) return progress > 0 ? "In progress" : "Not started";
+  if (deadline.getTime() <= now.getTime()) return "Behind target";
+  const duration = deadline.getTime() - createdAt.getTime();
+  if (duration <= 0) return "Behind target";
+  const elapsed = Math.max(0, now.getTime() - createdAt.getTime());
+  const expected = Math.min(100, Math.round((elapsed / duration) * 100));
+  return progress + 10 >= expected ? "On track" : "Behind target";
+}
+
+export function uniqueSuccessfulHabitDays(completions: Array<{ date: Date; status: string }>) {
+  return new Set(completions.filter((entry) => entry.status === "completed" || entry.status === "clean").map((entry) => entry.date.toISOString().slice(0, 10))).size;
+}

@@ -1,12 +1,12 @@
 import { ensureDefaultData } from "@/app/actions";
-import { DailySummaryCard } from "@/components/dashboard/DailySummaryCard";
-import { GrowthBriefing } from "@/components/dashboard/GrowthBriefing";
+import { DashboardCompletion, DashboardStatusOverview, type DailyStatus, type StatusItem } from "@/components/dashboard/DashboardStatusOverview";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { dateInputValue, formatDisplayDate, startOfDay } from "@/lib/dates";
+import { ConnectionStatus } from "@/components/shared/ConnectionStatus";
+import { dateInputValue, startOfDay } from "@/lib/dates";
+import { completionPercent, countStatus, nutritionTargetProgress } from "@/lib/dashboard";
 import { calculateNutritionTotals } from "@/lib/nutrition";
 import { prisma } from "@/lib/prisma";
-import { exerciseProgress } from "@/lib/workouts";
 import { getDefaultProfile } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
@@ -14,121 +14,51 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   await ensureDefaultData();
   const profile = await getDefaultProfile();
-
   const today = startOfDay();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const date = dateInputValue(today);
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - 7);
 
-  const [dailyLog, todos, meals, workouts, settings] =
-    await Promise.all([
-      prisma.dailyLog.findUnique({ where: { profileId_date: { profileId: profile.id, date: today } } }),
-      prisma.todoItem.findMany({ where: { date: today, profileId: profile.id }, orderBy: { createdAt: "asc" } }),
-      prisma.meal.findMany({
-        where: { date: today, profileId: profile.id },
-        include: { foodItems: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.workout.findMany({
-        where: { date: { gte: weekStart }, profileId: profile.id },
-        include: { exercises: { include: { sets: true } } },
-        orderBy: { date: "desc" },
-      }),
-      prisma.userSettings.findUniqueOrThrow({ where: { profileId: profile.id } }),
-    ]);
+  const [todosResult, mealsResult, workoutResult, habitsResult, settingsResult] = await Promise.allSettled([
+    prisma.todoItem.findMany({ where: { date: today, profileId: profile.id }, orderBy: { createdAt: "asc" } }),
+    prisma.meal.findMany({ where: { date: today, profileId: profile.id }, include: { foodItems: true }, orderBy: { createdAt: "desc" } }),
+    prisma.workout.findFirst({ where: { profileId: profile.id, date: { gte: today, lt: tomorrow } }, select: { id: true, name: true } }),
+    prisma.habit.findMany({ where: { profileId: profile.id, status: "Active" }, include: { completions: { where: { date: today } } } }),
+    prisma.userSettings.findUnique({ where: { profileId: profile.id } }),
+  ]);
 
-  const foodItems = meals.flatMap((meal) => meal.foodItems);
-  const totals = calculateNutritionTotals(foodItems);
+  const todos = todosResult.status === "fulfilled" ? todosResult.value : [];
+  const meals = mealsResult.status === "fulfilled" ? mealsResult.value : [];
+  const workout = workoutResult.status === "fulfilled" ? workoutResult.value : null;
+  const habits = habitsResult.status === "fulfilled" ? habitsResult.value : [];
+  const settings = settingsResult.status === "fulfilled" ? settingsResult.value : null;
+  const totals = calculateNutritionTotals(meals.flatMap((meal) => meal.foodItems));
   const completedTodos = todos.filter((todo) => todo.completed).length;
-  const completion = todos.length > 0 ? Math.round((completedTodos / todos.length) * 100) : 0;
-  const workoutStatus = workouts.some((workout) => workout.date.getTime() === today.getTime())
-    ? "Complete"
-    : "Open";
-  const hasMealsToday = meals.length > 0;
-  const hasMorningReadiness =
-    dailyLog?.energyLevel !== null &&
-    dailyLog?.energyLevel !== undefined &&
-    dailyLog?.sorenessLevel !== null &&
-    dailyLog?.sorenessLevel !== undefined &&
-    dailyLog?.stressLevel !== null &&
-    dailyLog?.stressLevel !== undefined &&
-    dailyLog?.mood !== null &&
-    dailyLog?.mood !== undefined;
-  const progress = exerciseProgress(workouts);
-  const recentPr = progress[0] ? `${progress[0].name} ${progress[0].bestWeight} lb` : "None yet";
+  const completion = completionPercent(completedTodos, todos.length);
+  const completedHabits = habits.filter((habit) => habit.completions.some((entry) => entry.status === "completed" || entry.status === "clean")).length;
+  const nutritionProgress = settings ? nutritionTargetProgress(totals.calories, settings.dailyCalorieGoal, totals.protein, settings.dailyProteinGoal) : 0;
 
-  const summaryItems = [
-    { label: "Date", value: formatDisplayDate(today) },
-    {
-      label: "Body weight",
-      value: dailyLog?.bodyWeight ? `${dailyLog.bodyWeight} lb` : "Needs input",
-      missing: !dailyLog?.bodyWeight,
-      helper: "Morning baseline",
-    },
-    {
-      label: "Calories",
-      value: hasMealsToday ? `${totals.calories} / ${settings.dailyCalorieGoal}` : "Needs meal log",
-      missing: !hasMealsToday,
-      helper: "Daily fuel target",
-    },
-    {
-      label: "Protein",
-      value: hasMealsToday
-        ? `${Math.round(totals.protein)}g / ${settings.dailyProteinGoal}g`
-        : "Needs protein plan",
-      missing: !hasMealsToday,
-      helper: "Recovery priority",
-    },
-    {
-      label: "Water",
-      value: dailyLog?.waterIntake ? `${dailyLog.waterIntake} / ${settings.dailyWaterGoal} oz` : "Needs input",
-      missing: !dailyLog?.waterIntake,
-      helper: "First hydration check",
-    },
-    {
-      label: "Workout",
-      value: workoutStatus === "Complete" ? "Complete" : "Needs plan/log",
-      missing: workoutStatus !== "Complete",
-      helper: "Training focus",
-    },
-    {
-      label: "Sleep",
-      value: dailyLog?.sleepHours ? `${dailyLog.sleepHours} hrs` : "Needs input",
-      missing: !dailyLog?.sleepHours,
-      helper: "Recovery baseline",
-    },
-    {
-      label: "Readiness",
-      value: hasMorningReadiness ? "Logged" : "Needs input",
-      missing: !hasMorningReadiness,
-      helper: "Energy, soreness, stress, mood",
-    },
+  const statuses: StatusItem[] = [
+    todosResult.status === "rejected"
+      ? { key: "priorities", title: "Daily priorities", status: "unavailable" as const, value: "Could not load", detail: "Your tasks were not changed. Retry this section.", href: "/", action: "Retry from dashboard" }
+      : { key: "priorities", title: "Daily priorities", status: countStatus(completedTodos, todos.length) as DailyStatus, value: `${completedTodos} of ${todos.length}`, detail: "Complete the few actions that make today successful.", href: "/#daily-priorities", action: todos.length ? "Review priorities" : "Add a priority" },
+    habitsResult.status === "rejected"
+      ? { key: "habits", title: "Habits", status: "unavailable" as const, value: "Could not load", detail: "Habit records remain safely stored.", href: "/habits", action: "Open habits" }
+      : { key: "habits", title: "Habits", status: countStatus(completedHabits, habits.length, "needs-attention") as DailyStatus, value: habits.length ? `${completedHabits} of ${habits.length}` : "No active habits", detail: habits.length ? "Today’s active habit check-ins." : "Create an active habit to begin tracking consistency.", href: "/habits", action: habits.length ? "Check in" : "Create a habit" },
+    mealsResult.status === "rejected" || settingsResult.status === "rejected"
+      ? { key: "nutrition", title: "Nutrition", status: "unavailable" as const, value: "Could not load", detail: "Nutrition records remain safely stored.", href: "/meals", action: "Open meals" }
+      : { key: "nutrition", title: "Nutrition", status: (meals.length === 0 ? "not-started" : nutritionProgress >= 85 ? "complete" : "in-progress") as DailyStatus, value: meals.length ? `${nutritionProgress}% toward targets` : "Nothing logged", detail: settings ? `${totals.calories}/${settings.dailyCalorieGoal} kcal · ${Math.round(totals.protein)}/${settings.dailyProteinGoal}g protein` : "Set nutrition targets to measure progress.", href: "/meals", action: meals.length ? "Review nutrition" : "Log food or drink" },
+    workoutResult.status === "rejected"
+      ? { key: "workout", title: "Workout", status: "unavailable" as const, value: "Could not load", detail: "Workout records remain safely stored.", href: "/gym", action: "Open workouts" }
+      : { key: "workout", title: "Workout", status: (workout ? "complete" : "not-started") as DailyStatus, value: workout ? "Logged" : "Not logged", detail: workout ? workout.name : "Log a workout only if one is planned today.", href: "/gym", action: workout ? "View session" : "Open workout tracker" },
   ];
+  const nextMove = completion < 100 ? "Finish or intentionally revise your open priorities." : habits.length && completedHabits < habits.length ? "Complete today’s remaining habit check-ins." : meals.length === 0 ? "Log your first food, drink, snack, or meal." : !workout ? "If today is a training day, log the session; otherwise your daily actions are current." : "Your core daily areas are current. Review details only where you need them.";
 
-  return (
-    <div>
-      <PageHeader
-        eyebrow="Personal growth system"
-        title="Today's upgrade path"
-        description="A living command center for execution, recovery, training, and nutrition signals."
-      />
-      <div className="grid gap-5">
-        <GrowthBriefing
-          completion={completion}
-          calories={totals.calories}
-          calorieGoal={settings.dailyCalorieGoal}
-          protein={totals.protein}
-          proteinGoal={settings.dailyProteinGoal}
-          water={dailyLog?.waterIntake ?? 0}
-          waterGoal={settings.dailyWaterGoal}
-          workoutComplete={workoutStatus === "Complete"}
-          sleepHours={dailyLog?.sleepHours ?? null}
-          energyLevel={dailyLog?.energyLevel ?? null}
-          recentPr={recentPr}
-        />
-        <DailySummaryCard items={summaryItems} completion={completion} />
-        <TodoList todos={todos} date={date} />
-      </div>
+  return <div>
+    <ConnectionStatus />
+    <PageHeader eyebrow="Daily command center" title="Today’s priorities and status" description="See what needs action now; use each dedicated page for detailed analysis and history." />
+    <div className="grid gap-5">
+      <DashboardStatusOverview items={statuses} nextMove={nextMove}/>
+      <section id="daily-priorities"><TodoList todos={todos} date={date}/><DashboardCompletion value={completion}/></section>
     </div>
-  );
+  </div>;
 }

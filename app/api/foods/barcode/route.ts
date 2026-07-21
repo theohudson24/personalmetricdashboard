@@ -9,6 +9,7 @@ import {
   type FoodNutrition,
   type FoodSearchResult,
 } from "@/lib/foodDataCentral";
+import { consumeRateLimit, privateRateLimitKey } from "@/lib/rateLimit";
 
 type Product = {
   product_name?: string;
@@ -95,6 +96,8 @@ async function usdaBarcode(barcode: string): Promise<FoodSearchResult | null> {
 export async function GET(request: Request) {
   try {
     const profile = await getDefaultProfile();
+    const rate = await consumeRateLimit(privateRateLimitKey("barcode", profile.id), 60, 60 * 1000);
+    if (!rate.allowed) return NextResponse.json({ error: "Too many barcode lookups. Wait briefly and try again.", kind: "rate_limit" }, { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } });
     const raw = new URL(request.url).searchParams.get("barcode") ?? "";
     const variants = barcodeVariants(raw);
     if (variants.length === 0) return NextResponse.json({ error: "Enter a valid 8–14 digit barcode.", kind: "input" }, { status: 400 });

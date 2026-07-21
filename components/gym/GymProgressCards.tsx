@@ -29,6 +29,7 @@ type ChartPoint = {
   date?: string;
   value: number;
   detail?: string;
+  personalRecord?: boolean;
 };
 
 const metricOptions: Array<{
@@ -295,6 +296,7 @@ export function GymProgressCards({
             label: formatShortDate(point.date),
             value: point.topWeight,
             detail: point.workoutName,
+            personalRecord: point.personalRecords.includes("TOP_WEIGHT"),
           })),
         selectedPeriod,
       );
@@ -309,6 +311,7 @@ export function GymProgressCards({
             label: formatShortDate(point.date),
             value: point.estimatedOneRepMax,
             detail: point.workoutName,
+            personalRecord: point.personalRecords.includes("ESTIMATED_1RM"),
           })),
         selectedPeriod,
       );
@@ -1063,6 +1066,12 @@ export function GymProgressCards({
                   className="h-80 w-full bg-[#111814]"
                   preserveAspectRatio="none"
                 >
+                  <defs>
+                    <linearGradient id="workoutProgressArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4db7a7" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="#4db7a7" stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
                   <text
                     x="16"
                     y="154"
@@ -1101,7 +1110,7 @@ export function GymProgressCards({
 
                   {selectedMetricOption.chartType === "line" && chartPoints.length > 1 ? (
                     <>
-                      <path d={`${chart.path} L ${chart.coordinates.at(-1)?.x} 252 L ${chart.coordinates[0].x} 252 Z`} fill="url(#progressArea)" />
+                      <path d={`${chart.path} L ${chart.coordinates.at(-1)?.x} 252 L ${chart.coordinates[0].x} 252 Z`} fill="url(#workoutProgressArea)" />
                       <path d={chart.path} fill="none" stroke="#4db7a7" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                       {chart.coordinates.slice(1).map((coordinate, index) => {
                         const previous = chart.coordinates[index];
@@ -1145,9 +1154,9 @@ export function GymProgressCards({
                             cx={coordinate.x}
                             cy={coordinate.y}
                             r={hoveredPointIndex === index ? "5.5" : "4"}
-                            fill="#111814"
-                            stroke="#111111"
-                            strokeWidth="2"
+                            fill={coordinate.point.personalRecord ? "#a4cf6f" : "#111814"}
+                            stroke={coordinate.point.personalRecord ? "#d9f2b9" : "#4db7a7"}
+                            strokeWidth={coordinate.point.personalRecord ? "3" : "2"}
                             onMouseEnter={() => setHoveredPointIndex(index)}
                             onMouseLeave={() => setHoveredPointIndex(null)}
                             className="cursor-pointer"
@@ -1248,6 +1257,7 @@ export function GymProgressCards({
                   })}
                 </svg>
               </div>
+              {selectedMetricOption.chartType === "line" ? <div className="flex flex-wrap gap-4 px-1 text-xs text-muted"><span><i className="mr-1 inline-block h-2 w-5 rounded bg-growth"/>Improved</span><span><i className="mr-1 inline-block h-2 w-5 rounded bg-[#eabf69]"/>No change</span><span><i className="mr-1 inline-block h-2 w-5 rounded bg-[#e06464]"/>Lower</span>{requiresExercise ? <span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-growth"/>Personal record</span> : null}</div> : null}
 
             </>
           )}

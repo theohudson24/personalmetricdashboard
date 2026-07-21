@@ -58,6 +58,8 @@ export function exerciseProgress(workouts: WorkoutWithExercises[]) {
 }
 
 export type ExerciseProgressPoint = {
+  workoutId: string;
+  exerciseId: string;
   exerciseName: string;
   muscleGroup: string;
   date: string;
@@ -68,10 +70,14 @@ export type ExerciseProgressPoint = {
   volume: number;
   totalSets: number;
   averageWeight: number;
+  personalRecords: PersonalRecordKind[];
 };
+
+export type PersonalRecordKind = "TOP_WEIGHT" | "ESTIMATED_1RM" | "REPS" | "VOLUME";
 
 export function exerciseProgressSeries(workouts: WorkoutWithExercises[]) {
   const points: ExerciseProgressPoint[] = [];
+  const bestByExercise = new Map<string, { topWeight: number; oneRepMax: number; reps: number; volume: number; seen: boolean }>();
 
   const sortedWorkouts = [...workouts].sort(
     (a, b) => a.date.getTime() - b.date.getTime(),
@@ -99,8 +105,25 @@ export function exerciseProgressSeries(workouts: WorkoutWithExercises[]) {
       const averageWeight =
         workingSets.reduce((total, set) => total + set.weight, 0) /
         workingSets.length;
+      const key = exercise.name.trim().toLowerCase();
+      const previous = bestByExercise.get(key) ?? { topWeight: 0, oneRepMax: 0, reps: 0, volume: 0, seen: false };
+      const personalRecords: PersonalRecordKind[] = previous.seen ? [
+        ...(topWeight > previous.topWeight ? ["TOP_WEIGHT" as const] : []),
+        ...(bestOneRepMax > previous.oneRepMax ? ["ESTIMATED_1RM" as const] : []),
+        ...(bestReps > previous.reps ? ["REPS" as const] : []),
+        ...(volume > previous.volume ? ["VOLUME" as const] : []),
+      ] : [];
+      bestByExercise.set(key, {
+        topWeight: Math.max(previous.topWeight, topWeight),
+        oneRepMax: Math.max(previous.oneRepMax, bestOneRepMax),
+        reps: Math.max(previous.reps, bestReps),
+        volume: Math.max(previous.volume, volume),
+        seen: true,
+      });
 
       points.push({
+        workoutId: workout.id,
+        exerciseId: exercise.id,
         exerciseName: exercise.name,
         muscleGroup: exercise.muscleGroup || "Uncategorized",
         date: workout.date.toISOString(),
@@ -111,6 +134,7 @@ export function exerciseProgressSeries(workouts: WorkoutWithExercises[]) {
         volume,
         totalSets: workingSets.length,
         averageWeight,
+        personalRecords,
       });
     }
   }

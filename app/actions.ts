@@ -479,9 +479,17 @@ export async function updateMeal(formData: FormData) {
   revalidateApp();
 }
 
-export async function updateSettings(formData: FormData) {
+export type SettingsSaveResult = { status: "saved" | "error" | "conflict"; message: string; updatedAt?: string };
+
+export async function updateSettings(formData: FormData): Promise<SettingsSaveResult> {
+  try {
   const profile = await getDefaultProfile();
   const existing = await prisma.userSettings.findUnique({ where: { profileId: profile.id } });
+  if (!existing) return { status: "error", message: "Settings are not available yet. Refresh and try again." };
+  const expectedUpdatedAt = new Date(stringValue(formData, "expectedUpdatedAt", existing.updatedAt.toISOString()));
+  if (Number.isNaN(expectedUpdatedAt.getTime()) || existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+    return { status: "conflict", message: "These settings changed on another device. Refresh before saving over them." };
+  }
   const includeProfileMetrics = formData.get("includeProfileMetrics") === "true";
   const heightFeet = optionalNumber(formData, "heightFeet");
   const heightInchesRemainder = optionalNumber(formData, "heightInchesRemainder");
@@ -493,18 +501,11 @@ export async function updateSettings(formData: FormData) {
     heightFeet !== null || heightInchesRemainder !== null
       ? (heightFeet ?? 0) * 12 + (heightInchesRemainder ?? 0)
       : profile.heightInches;
-  const updatedProfile = includeProfileMetrics
-    ? await prisma.profile.update({
-        where: { id: profile.id },
-        data: {
-          heightInches,
-          weightLb,
-          age: age !== null ? Math.round(age) : null,
-          gender: gender || null,
-          activityLevel,
-        },
-      })
-    : profile;
+  if ((heightInches ?? 0) < 0 || (heightInches ?? 0) > 120 || (weightLb ?? 0) < 0 || (weightLb ?? 0) > 1500 || (age ?? 0) < 0 || (age ?? 0) > 130) {
+    return { status: "error", message: "Check the body measurements; one value is outside a reasonable range." };
+  }
+  const profileData = { heightInches, weightLb, age: age !== null ? Math.round(age) : null, gender: gender || null, activityLevel };
+  const updatedProfile = includeProfileMetrics ? { ...profile, ...profileData } : profile;
   const recommendation = calculateNutritionRecommendation(updatedProfile);
   const shouldUseRecommendation =
     formData.get("goalMode") === "recommended" && recommendation !== null;
@@ -561,11 +562,19 @@ export async function updateSettings(formData: FormData) {
     useRecommendedGoals: shouldUseRecommendation,
   };
 
-  if (existing) {
-    await prisma.userSettings.update({ where: { id: existing.id }, data });
-  } else {
-    await prisma.userSettings.create({ data });
-  }
+  const numericValues = Object.values(data).filter((value): value is number => typeof value === "number");
+  if (numericValues.some((value) => !Number.isFinite(value) || value < 0 || value > 10_000_000)) return { status: "error", message: "Check the nutrition targets; all values must be valid and non-negative." };
+  await prisma.$transaction(async (transaction) => {
+    if (includeProfileMetrics) await transaction.profile.update({ where: { id: profile.id }, data: profileData });
+    const saved = await transaction.userSettings.updateMany({ where: { id: existing.id, updatedAt: expectedUpdatedAt }, data });
+    if (!saved.count) throw new Error("SETTINGS_CONFLICT");
+  });
 
   revalidateApp();
+  const updated = await prisma.userSettings.findUniqueOrThrow({ where: { id: existing.id }, select: { updatedAt: true } });
+  return { status: "saved", message: "All changes saved.", updatedAt: updated.updatedAt.toISOString() };
+  } catch (error) {
+    if (error instanceof Error && error.message === "SETTINGS_CONFLICT") return { status: "conflict", message: "These settings changed on another device. Refresh before saving over them." };
+    return { status: "error", message: "Settings could not be saved on our end. Your changes remain on this page; retry before leaving." };
+  }
 }

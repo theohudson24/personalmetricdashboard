@@ -1,16 +1,28 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { createBugReport, idleBugReportState } from "@/app/report-bug/actions";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
+import { clearDraft, readDraft, writeDraft } from "@/lib/clientDraft";
 
-export function BugReportForm({ initialPage = "", errorReference = "" }: { initialPage?: string; errorReference?: string }) {
+export function BugReportForm({ initialPage = "", errorReference = "", draftScope }: { initialPage?: string; errorReference?: string; draftScope: string }) {
   const [state, action, pending] = useActionState(createBugReport, idleBugReportState);
   const [deviceInfo, setDeviceInfo] = useState("");
-  useEffect(() => { setDeviceInfo(`${navigator.userAgent}; screen ${window.screen.width}x${window.screen.height}`); }, []);
-  return <form action={action} className="space-y-4">
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    setDeviceInfo(`${navigator.userAgent}; screen ${window.screen.width}x${window.screen.height}`);
+    clearDraft("bug-report");
+    const draft = readDraft<Record<string, string>>(`${draftScope}:bug-report`);
+    if (!draft || !formRef.current) return;
+    for (const [name, value] of Object.entries(draft)) {
+      const field = formRef.current.elements.namedItem(name);
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement) field.value = value;
+    }
+  }, [draftScope]);
+  useEffect(() => { if (state.status === "success") clearDraft(`${draftScope}:bug-report`); }, [draftScope, state.status]);
+  return <form ref={formRef} action={action} onInput={(event) => { const form = event.currentTarget; writeDraft(`${draftScope}:bug-report`, Object.fromEntries(new FormData(form).entries())); }} className="space-y-4">
     <input type="hidden" name="deviceInfo" value={deviceInfo} />
     <Field label="Area affected"><Select name="category" defaultValue="OTHER"><option value="NUTRITION">Meals and nutrition</option><option value="WORKOUTS">Gym and workouts</option><option value="HABITS">Habits</option><option value="ACCOUNT">Settings and account</option><option value="LOGIN">Login or logout</option><option value="OTHER">Other</option></Select></Field>
     <Field label="Short title"><Input name="summary" required minLength={5} maxLength={120} placeholder="What went wrong?" /></Field>
