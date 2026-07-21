@@ -25,16 +25,6 @@ const defaultTodos = [
   "Review yesterday's nutrition and workout notes",
 ];
 
-const legacyDefaultTodos = [
-  "Drink water",
-  "Take morning supplements",
-  "Complete workout",
-  "Hit protein goal",
-  "Log meals",
-  "Stretch or mobility work",
-  "Complete nighttime routine",
-];
-
 function revalidateApp() {
   revalidatePath("/");
   revalidatePath("/gym");
@@ -50,37 +40,6 @@ export async function ensureDefaultData() {
     await prisma.userSettings.create({ data: { profileId: profile.id } });
   }
 
-  const today = startOfDay();
-  const todoCount = await prisma.todoItem.count({ where: { date: today, profileId: profile.id } });
-
-  if (todoCount === 0) {
-    await prisma.todoItem.createMany({
-      data: defaultTodos.map((title) => ({ date: today, title, profileId: profile.id })),
-      skipDuplicates: true,
-    });
-  } else {
-    await prisma.todoItem.deleteMany({
-      where: {
-        date: today,
-        profileId: profile.id,
-        title: { in: legacyDefaultTodos },
-      },
-    });
-
-    const existingTodos = await prisma.todoItem.findMany({
-      where: { date: today, profileId: profile.id },
-      select: { title: true },
-    });
-    const existingTitles = new Set(existingTodos.map((todo) => todo.title));
-    const missingDefaults = defaultTodos.filter((title) => !existingTitles.has(title));
-
-    if (missingDefaults.length > 0) {
-      await prisma.todoItem.createMany({
-        data: missingDefaults.map((title) => ({ date: today, title, profileId: profile.id })),
-        skipDuplicates: true,
-      });
-    }
-  }
 }
 
 export async function updateDailyLog(formData: FormData) {

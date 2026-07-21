@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { LogOut, ShieldCheck, UserRound } from "lucide-react";
-import { idleSettingsState, updateAccount } from "@/app/settings/actions";
+import { updateAccount } from "@/app/settings/actions";
+import { idleSettingsState } from "@/lib/actionStates";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";

@@ -9,9 +9,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { importStrongCsv } from "@/lib/strongCsv";
 import { emailSet } from "@/lib/access";
 import { normalizePhone } from "@/lib/account";
-
-export type SettingsActionState = { status: "idle" | "success" | "error"; message: string };
-export const idleSettingsState: SettingsActionState = { status: "idle", message: "" };
+import type { SettingsActionState } from "@/lib/actionStates";
 
 export async function uploadStrongCsv(_state: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
   try {

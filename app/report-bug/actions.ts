@@ -4,9 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
 import { consumeRateLimit, privateRateLimitKey } from "@/lib/rateLimit";
-
-export type BugReportState = { status: "idle" | "success" | "error"; message: string; reference?: string };
-export const idleBugReportState: BugReportState = { status: "idle", message: "" };
+import type { BugReportState } from "@/lib/actionStates";
 
 export async function createBugReport(_state: BugReportState, formData: FormData): Promise<BugReportState> {
   try {

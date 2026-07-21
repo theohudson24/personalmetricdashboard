@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
-import { createBugReport, idleBugReportState } from "@/app/report-bug/actions";
+import { createBugReport } from "@/app/report-bug/actions";
+import { idleBugReportState } from "@/lib/actionStates";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { clearDraft, readDraft, writeDraft } from "@/lib/clientDraft";
