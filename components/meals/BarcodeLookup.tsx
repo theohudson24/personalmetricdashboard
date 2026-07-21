@@ -14,10 +14,14 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
   const [scanning, setScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const activeLookupRef = useRef("");
 
   async function lookup(code = barcode) {
     const clean = code.replace(/\D/g, "");
     if (!clean) return;
+    if (activeLookupRef.current === clean) return;
+    activeLookupRef.current = clean;
+    controlsRef.current?.stop(); controlsRef.current = null; setScanning(false);
     setLoading(true); setError("");
     try {
       const response = await fetch(`/api/foods/barcode?barcode=${clean}`);
@@ -25,7 +29,7 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
       if (!response.ok || !data.food) throw new Error(data.error || "Food not found.");
       setBarcode(clean); onFound(data.food); stopScan();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Food not found."); }
-    finally { setLoading(false); }
+    finally { setLoading(false); activeLookupRef.current = ""; }
   }
 
   function stopScan() { controlsRef.current?.stop(); controlsRef.current = null; setScanning(false); }

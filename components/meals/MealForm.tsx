@@ -1,12 +1,13 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Plus, Search, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type ComponentProps } from "react";
-import { createMeal } from "@/app/actions";
+import { useActionState, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { createMealEntryState, type MealActionState } from "@/app/meals/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
-import { scaleNutrition, type FoodNutrition, type FoodSearchResult } from "@/lib/foodDataCentral";
+import { nutritionQuality, scaleNutrition, type FoodNutrition, type FoodSearchResult } from "@/lib/foodDataCentral";
+import { referenceFromCurrent } from "@/lib/meals";
 import { BarcodeLookup } from "@/components/meals/BarcodeLookup";
 
 type FoodDraft = FoodNutrition & {
@@ -20,9 +21,15 @@ type FoodDraft = FoodNutrition & {
   searchResults: FoodSearchResult[];
   isSearching: boolean;
   searchError: string;
+  userEdited: boolean;
+  referenceNutrition: FoodNutrition;
 };
 
-const today = new Date().toISOString().slice(0, 10);
+const draftKey = "metric-os-meal-draft-v2";
+const initialMealActionState: MealActionState = { status: "idle", message: "" };
+function localDateKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 const mealTypes = [
   ["BREAKFAST", "Breakfast"],
   ["LUNCH", "Lunch"],
@@ -62,6 +69,8 @@ function newFoodDraft(): FoodDraft {
     searchResults: [],
     isSearching: false,
     searchError: "",
+    userEdited: false,
+    referenceNutrition: { ...emptyNutrition },
     ...emptyNutrition,
   };
 }
@@ -83,15 +92,11 @@ function EditableNumberInput({ value, onValueChange, ...props }: Omit<ComponentP
 
 function updatesForWeight(item: FoodDraft, grams: number): Partial<FoodDraft> {
   const servings = item.gramsPerServing > 0 ? grams / item.gramsPerServing : 0;
-  if (!item.selectedFood) {
-    return { grams, servings, servingSize: `${grams} g` };
-  }
-
   return {
     grams,
     servings,
     servingSize: `${Number(servings.toFixed(2))} serving(s) · ${grams} g`,
-    ...scaleNutrition(item.selectedFood.nutrientsPer100g, grams),
+    ...scaleNutrition(item.referenceNutrition, grams),
   };
 }
 
@@ -99,6 +104,52 @@ export function MealForm() {
   const [entryKind, setEntryKind] = useState<"MEAL" | "ITEM" | "DRINK" | "SNACK">("ITEM");
   const [items, setItems] = useState<FoodDraft[]>([newFoodDraft()]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
+  const [dateKey, setDateKey] = useState(localDateKey);
+  const [mealType, setMealType] = useState("BREAKFAST");
+  const [mealName, setMealName] = useState("");
+  const [time, setTime] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
+  const [timezone, setTimezone] = useState("UTC");
+  const [restored, setRestored] = useState(false);
+  const [state, formAction, pending] = useActionState(createMealEntryState, initialMealActionState);
+  const searchTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const draftTotals = useMemo(() => items.reduce((totals, item) => ({
+    calories: totals.calories + item.calories,
+    protein: totals.protein + item.protein,
+    carbs: totals.carbs + item.carbs,
+    fat: totals.fat + item.fat,
+  }), { calories: 0, protein: 0, carbs: 0, fat: 0 }), [items]);
+
+  useEffect(() => {
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+    const timers = searchTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(draftKey) || "null") as { entryKind?: typeof entryKind; items?: FoodDraft[]; dateKey?: string; mealType?: string; mealName?: string; time?: string; notes?: string; submissionId?: string } | null;
+      if (saved?.items?.length) {
+        setEntryKind(saved.entryKind ?? "ITEM"); setItems(saved.items.map((item) => ({ ...item, searchResults: [], isSearching: false, searchError: "" })));
+        setExpandedIds(new Set([saved.items[0].id])); setDateKey(saved.dateKey || localDateKey());
+        setMealType(saved.mealType || "BREAKFAST"); setMealName(saved.mealName || ""); setTime(saved.time || ""); setNotes(saved.notes || "");
+        setSubmissionId(saved.submissionId || crypto.randomUUID());
+      }
+    } catch { localStorage.removeItem(draftKey); }
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!restored) return;
+    localStorage.setItem(draftKey, JSON.stringify({ entryKind, items: items.map((item) => ({ ...item, searchResults: [], isSearching: false, searchError: "" })), dateKey, mealType, mealName, time, notes, submissionId }));
+  }, [restored, entryKind, items, dateKey, mealType, mealName, time, notes, submissionId]);
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    const fresh = newFoodDraft(); setItems([fresh]); setExpandedIds(new Set([fresh.id]));
+    setMealName(""); setNotes(""); setTime(""); setSubmissionId(crypto.randomUUID()); localStorage.removeItem(draftKey);
+  }, [state]);
 
   function updateItem(id: string, updates: Partial<FoodDraft>) {
     setItems((current) =>
@@ -129,6 +180,15 @@ export function MealForm() {
     }
   }
 
+  function scheduleFoodSearch(item: FoodDraft, foodName: string) {
+    const existing = searchTimers.current.get(item.id);
+    if (existing) clearTimeout(existing);
+    if (foodName.trim().length < 2) return;
+    searchTimers.current.set(item.id, setTimeout(() => {
+      void searchFood({ ...item, foodName });
+    }, 450));
+  }
+
   function applyFoodResult(item: FoodDraft, result: FoodSearchResult) {
     const gramsPerServing = result.servingGrams || 100;
     const grams = gramsPerServing;
@@ -140,7 +200,9 @@ export function MealForm() {
       servings: 1,
       gramsPerServing,
       selectedFood: result,
+      referenceNutrition: result.nutrientsPer100g,
       searchResults: [],
+      userEdited: false,
       ...scaled,
     });
   }
@@ -151,17 +213,19 @@ export function MealForm() {
         title="Log food and drinks"
         description="Add one item, drink, or snack quickly—or build a complete meal from multiple ingredients."
       />
-      <form action={createMeal} className="space-y-5">
+      <form action={formAction} className="space-y-5">
         <input type="hidden" name="entryKind" value={entryKind} />
+        <input type="hidden" name="clientRequestId" value={submissionId} />
+        <input type="hidden" name="timezone" value={timezone} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Nutrition entry type">
-          {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-[#07100d]" : "border-line bg-black/15 text-muted"}`}>{label}</button>)}
+          {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value === "SNACK") setMealType("SNACK"); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-[#07100d]" : "border-line bg-black/15 text-muted"}`}>{label}</button>)}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Date">
-            <Input name="date" type="date" defaultValue={today} />
+            <Input name="date" type="date" value={dateKey} onChange={(event) => setDateKey(event.target.value)} />
           </Field>
           <Field label={entryKind === "MEAL" ? "Meal type" : "Time of day"}>
-            <Select key={entryKind} name="mealType" defaultValue={entryKind === "SNACK" ? "SNACK" : "BREAKFAST"}>
+            <Select key={entryKind} name="mealType" value={mealType} onChange={(event) => setMealType(event.target.value)}>
               {mealTypes.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -169,13 +233,13 @@ export function MealForm() {
               ))}
             </Select>
           </Field>
-          {entryKind === "MEAL" ? <Field label="Meal name"><Input name="mealName" placeholder="Chicken rice bowl" required /></Field> : null}
+          {entryKind === "MEAL" ? <Field label="Meal name"><Input name="mealName" value={mealName} onChange={(event) => setMealName(event.target.value)} placeholder="Chicken rice bowl" required /></Field> : null}
           <Field label="Time">
-            <Input name="time" type="time" />
+            <Input name="time" type="time" value={time} onChange={(event) => setTime(event.target.value)} />
           </Field>
         </div>
         <Field label="Meal notes">
-          <Textarea name="notes" />
+          <Textarea name="notes" value={notes} onChange={(event) => setNotes(event.target.value)} />
         </Field>
 
         <BarcodeLookup onFound={(food) => applyFoodResult(items.find((item) => expandedIds.has(item.id)) ?? items[items.length - 1], food)} />
@@ -214,19 +278,19 @@ export function MealForm() {
                   <Field label="Ingredient">
                     <Input
                       value={item.foodName}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          foodName: event.target.value,
-                        })
-                      }
+                      onChange={(event) => {
+                        const foodName = event.target.value;
+                        updateItem(item.id, { foodName, userEdited: true });
+                        scheduleFoodSearch(item, foodName);
+                      }}
                       placeholder="Ingredient Name"
                     />
                   </Field>
                   <Field label="Servings">
-                    <EditableNumberInput type="number" min="0" step="0.1" value={Number(item.servings.toFixed(2))} onValueChange={(servings) => { const grams = servings * item.gramsPerServing; updateItem(item.id, { servings, grams, servingSize: `${servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...(item.selectedFood ? scaleNutrition(item.selectedFood.nutrientsPer100g, grams) : {}) }); }} />
+                    <EditableNumberInput type="number" min="0" step="0.1" value={Number(item.servings.toFixed(2))} onValueChange={(servings) => { const grams = servings * item.gramsPerServing; updateItem(item.id, { servings, grams, servingSize: `${servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...scaleNutrition(item.referenceNutrition, grams) }); }} />
                   </Field>
                   <Field label="g / serving">
-                    <EditableNumberInput type="number" min="0" step="0.1" value={item.gramsPerServing} onValueChange={(gramsPerServing) => { const grams = item.servings * gramsPerServing; updateItem(item.id, { gramsPerServing, grams, servingSize: `${item.servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...(item.selectedFood ? scaleNutrition(item.selectedFood.nutrientsPer100g, grams) : {}) }); }} />
+                    <EditableNumberInput type="number" min="0" step="0.1" value={item.gramsPerServing} onValueChange={(gramsPerServing) => { const grams = item.servings * gramsPerServing; updateItem(item.id, { gramsPerServing, grams, servingSize: `${item.servings} serving(s) · ${Number(grams.toFixed(1))} g`, ...scaleNutrition(item.referenceNutrition, grams) }); }} />
                   </Field>
                   <Field label="Weight g">
                     <EditableNumberInput
@@ -278,7 +342,14 @@ export function MealForm() {
               <input type="hidden" name="foodBarcode" value={item.selectedFood?.barcode ?? ""} />
               <input type="hidden" name="foodSource" value={item.selectedFood?.source ?? item.selectedFood?.dataType ?? "Manual"} />
               <input type="hidden" name="foodBrand" value={item.selectedFood?.brandOwner ?? ""} />
+              <input type="hidden" name="foodSourceId" value={item.selectedFood?.fdcId ?? ""} />
               <input type="hidden" name="foodGrams" value={item.grams} />
+              <input type="hidden" name="foodServings" value={item.servings} />
+              <input type="hidden" name="foodGramsPerServing" value={item.gramsPerServing} />
+              <input type="hidden" name="foodConfidence" value={item.selectedFood?.confidence ?? "missing"} />
+              <input type="hidden" name="foodMissingNutrients" value={item.selectedFood?.missingNutrients?.join(",") ?? ""} />
+              <input type="hidden" name="foodUserEdited" value={String(item.userEdited)} />
+              <input type="hidden" name="referenceNutrition" value={JSON.stringify(item.referenceNutrition)} />
 
               {item.selectedFood ? <div className={`mb-3 rounded-md border p-3 text-sm ${item.selectedFood.confidence === "complete" ? "border-core/30 bg-core/10 text-muted" : "border-ember/40 bg-ember/10 text-ink"}`}>
                 <span className="font-semibold">Source: {item.selectedFood.source ?? item.selectedFood.dataType}.</span>{" "}
@@ -311,7 +382,12 @@ export function MealForm() {
                       min="0"
                       step={step}
                       value={item[name as keyof FoodNutrition]}
-                      onValueChange={(value) => updateItem(item.id, { [name]: value } as Partial<FoodDraft>)}
+                      onValueChange={(value) => {
+                        const nutrition = { ...Object.fromEntries(Object.keys(emptyNutrition).map((key) => [key, item[key as keyof FoodNutrition]])), [name]: value } as FoodNutrition;
+                        const referenceNutrition = referenceFromCurrent(nutrition, item.grams);
+                        const quality = nutritionQuality(referenceNutrition);
+                        updateItem(item.id, { [name]: value, referenceNutrition, userEdited: true, ...(item.selectedFood ? { selectedFood: { ...item.selectedFood, nutrientsPer100g: referenceNutrition, confidence: quality.confidence, missingNutrients: quality.missingNutrients } } : {}) } as Partial<FoodDraft>);
+                      }}
                     />
                   </Field>
                 ))}
@@ -325,12 +401,23 @@ export function MealForm() {
                   <input type="hidden" name="foodBarcode" value={item.selectedFood?.barcode ?? ""} />
                   <input type="hidden" name="foodSource" value={item.selectedFood?.source ?? item.selectedFood?.dataType ?? "Manual"} />
                   <input type="hidden" name="foodBrand" value={item.selectedFood?.brandOwner ?? ""} />
+                  <input type="hidden" name="foodSourceId" value={item.selectedFood?.fdcId ?? ""} />
                   <input type="hidden" name="foodGrams" value={item.grams} />
+                  <input type="hidden" name="foodServings" value={item.servings} />
+                  <input type="hidden" name="foodGramsPerServing" value={item.gramsPerServing} />
+                  <input type="hidden" name="foodConfidence" value={item.selectedFood?.confidence ?? "missing"} />
+                  <input type="hidden" name="foodMissingNutrients" value={item.selectedFood?.missingNutrients?.join(",") ?? ""} />
+                  <input type="hidden" name="foodUserEdited" value={String(item.userEdited)} />
+                  <input type="hidden" name="referenceNutrition" value={JSON.stringify(item.referenceNutrition)} />
                   {Object.keys(emptyNutrition).map((name) => <input key={name} type="hidden" name={name} value={item[name as keyof FoodNutrition]} />)}
                 </div>
               )}
             </div>
           ))}
+        </div>
+
+        <div className="rounded-md border border-core/25 bg-core/10 p-3 text-sm text-muted" aria-live="polite">
+          Current entry: <strong className="text-ink">{Math.round(draftTotals.calories)} kcal</strong> · {Math.round(draftTotals.protein * 10) / 10}g protein · {Math.round(draftTotals.carbs * 10) / 10}g carbs · {Math.round(draftTotals.fat * 10) / 10}g fat
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -346,12 +433,13 @@ export function MealForm() {
             <Plus size={16} />
             <span className="ml-2">Add food</span>
           </Button> : null}
-          <Button>{entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`}</Button>
+          <Button disabled={pending}>{pending ? "Saving…" : entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`}</Button>
           {entryKind === "MEAL" ? <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
             <input type="checkbox" name="saveAsTemplate" className="accent-[#4db7a7]" />
             Save this meal as a reusable template
           </label> : null}
         </div>
+        {state.message ? <p role="status" className={`text-sm ${state.status === "error" ? "text-ember" : "text-core"}`}>{state.message}</p> : null}
       </form>
     </Card>
   );

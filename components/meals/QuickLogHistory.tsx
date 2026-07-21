@@ -1,6 +1,7 @@
 import type { FoodItem, Meal } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { History } from "lucide-react";
-import { reuseLoggedEntry } from "@/app/actions";
+import { duplicateMealEntry } from "@/app/meals/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -8,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 type Entry = Meal & { foodItems: FoodItem[] };
 
 export function QuickLogHistory({ entries }: { entries: Entry[] }) {
+  const now = new Date(); const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const unique = entries.filter((entry, index, all) => all.findIndex((candidate) => candidate.entryKind === entry.entryKind && candidate.mealName.toLowerCase() === entry.mealName.toLowerCase()) === index).slice(0, 8);
   return <Card>
     <CardHeader title="Quick log history" description="Reuse a recent item, drink, snack, or meal without scanning or typing it again." />
@@ -17,7 +19,7 @@ export function QuickLogHistory({ entries }: { entries: Entry[] }) {
         const protein = entry.foodItems.reduce((sum, item) => sum + item.protein, 0);
         return <article key={entry.id} className="flex items-center justify-between gap-3 rounded-md border border-line bg-black/15 p-3">
           <div className="min-w-0"><p className="truncate font-medium">{entry.mealName}</p><p className="text-xs text-muted">{entry.entryKind.toLowerCase()} · {Math.round(calories)} kcal · {Math.round(protein)}g protein</p></div>
-          <form action={reuseLoggedEntry}><input type="hidden" name="id" value={entry.id} /><Button variant="secondary" className="shrink-0"><History size={15}/><span className="ml-2">Log again</span></Button></form>
+          <form action={duplicateMealEntry}><input type="hidden" name="id" value={entry.id}/><input type="hidden" name="dateKey" value={dateKey}/><input type="hidden" name="clientRequestId" value={randomUUID()}/><Button variant="secondary" className="shrink-0"><History size={15}/><span className="ml-2">Log again</span></Button></form>
         </article>;
       })}
     </div>}
