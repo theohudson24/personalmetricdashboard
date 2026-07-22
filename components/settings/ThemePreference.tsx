@@ -23,8 +23,8 @@ export function ThemePreference() {
     <Card>
       <CardHeader title="Appearance" description="Choose the display mode used across the dashboard." />
       <div className="grid grid-cols-2 gap-3">
-        <button type="button" onClick={() => choose("dark")} className={`rounded-md border p-4 text-left ${theme === "dark" ? "border-core bg-core/10" : "border-line bg-black/10"}`}><Moon className="mb-3" size={20} /><span className="font-semibold">Dark</span></button>
-        <button type="button" onClick={() => choose("light")} className={`rounded-md border p-4 text-left ${theme === "light" ? "border-core bg-core/10" : "border-line bg-black/10"}`}><Sun className="mb-3" size={20} /><span className="font-semibold">Light</span></button>
+        <button type="button" onClick={() => choose("dark")} className={`rounded-md border p-4 text-left ${theme === "dark" ? "border-core bg-core/10" : "border-line bg-ink/[0.02]"}`}><Moon className="mb-3" size={20} /><span className="font-semibold">Dark</span></button>
+        <button type="button" onClick={() => choose("light")} className={`rounded-md border p-4 text-left ${theme === "light" ? "border-core bg-core/10" : "border-line bg-ink/[0.02]"}`}><Sun className="mb-3" size={20} /><span className="font-semibold">Light</span></button>
       </div>
     </Card>
   );

@@ -170,7 +170,7 @@ export function MealForm({ draftScope }: { draftScope: string }) {
       <form action={async (data) => { await createMeal(data); clearDraft(`${draftScope}:meal`); }} className="space-y-5">
         <input type="hidden" name="entryKind" value={entryKind} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Nutrition entry type">
-          {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-[#07100d]" : "border-line bg-black/15 text-muted"}`}>{label}</button>)}
+          {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-white" : "border-line bg-ink/[0.025] text-muted"}`}>{label}</button>)}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Date">
@@ -198,18 +198,18 @@ export function MealForm({ draftScope }: { draftScope: string }) {
 
         <div className="space-y-4">
           {items.map((item, index) => (
-            <div key={item.id} className="rounded-md border border-line bg-black/10 p-3">
+            <div key={item.id} className="rounded-md border border-line bg-ink/[0.02] p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">{entryKind === "MEAL" ? `Ingredient #${index + 1}` : entryKind === "DRINK" ? "Drink" : entryKind === "SNACK" ? "Snack" : "Item"}</p>
                 <div className="flex gap-1">
-                <Button type="button" variant="secondary" className="h-11 border-core/50 bg-core/10 px-3 text-core shadow-[0_0_18px_rgba(77,183,167,0.12)] hover:bg-core/20" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"} aria-expanded={expandedIds.has(item.id)}>
+                <Button type="button" variant="secondary" className="h-11 border-core/50 bg-core/10 px-3 text-core hover:bg-core/20" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (next.has(item.id)) next.delete(item.id); else next.add(item.id); return next; })} title={expandedIds.has(item.id) ? "Collapse ingredient" : "Expand ingredient"} aria-expanded={expandedIds.has(item.id)}>
                   {expandedIds.has(item.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   <span className="ml-2">{expandedIds.has(item.id) ? "Collapse" : "Expand"}</span>
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-12 w-12 border-line bg-black/15 p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
+                  className="h-12 w-12 border-line bg-ink/[0.025] p-0 text-muted hover:border-ember/50 hover:bg-ember/15 hover:text-ember active:bg-ember/20"
                   onClick={() =>
                     setItems((current) =>
                       current.length === 1
@@ -225,7 +225,7 @@ export function MealForm({ draftScope }: { draftScope: string }) {
               </div>
 
               {expandedIds.has(item.id) ? <>
-              <div className="mb-4 rounded-md border border-line bg-black/15 p-3">
+              <div className="mb-4 rounded-md border border-line bg-ink/[0.025] p-3">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_8rem_8rem_8rem_auto]">
                   <Field label="Ingredient">
                     <Input
@@ -272,7 +272,7 @@ export function MealForm({ draftScope }: { draftScope: string }) {
                         key={result.fdcId}
                         type="button"
                         onClick={() => applyFoodResult(item, result)}
-                        className="rounded-md border border-line bg-black/15 p-3 text-left transition hover:border-core/40 hover:bg-white/[0.06]"
+                        className="rounded-md border border-line bg-ink/[0.025] p-3 text-left transition hover:border-core/40 hover:bg-ink/[0.04]"
                       >
                         <span className="block text-sm font-medium">{result.description}</span>
                         <span className="mt-1 block text-xs text-muted">
@@ -363,8 +363,8 @@ export function MealForm({ draftScope }: { draftScope: string }) {
             <span className="ml-2">Add food</span>
           </Button> : null}
           <SubmitButton idle={entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`} pending="Saving…" />
-          {entryKind === "MEAL" ? <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
-            <input type="checkbox" name="saveAsTemplate" className="accent-[#4db7a7]" />
+          {entryKind === "MEAL" ? <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-ink/[0.025] px-3 text-sm text-muted">
+            <input type="checkbox" name="saveAsTemplate" className="accent-core" />
             Save this meal as a reusable template
           </label> : null}
         </div>

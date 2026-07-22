@@ -8,14 +8,14 @@ export function Button({
   variant?: "primary" | "secondary" | "ghost";
 }) {
   const styles = {
-    primary: "border-core bg-core text-[#07100d] shadow-[0_10px_24px_rgba(77,183,167,0.2)] hover:bg-[#74cfc2]",
-    secondary: "border-line bg-white/[0.07] text-ink hover:border-core/40 hover:bg-white/[0.1]",
-    ghost: "border-transparent bg-transparent text-muted hover:bg-core/10 hover:text-core",
+    primary: "border-core bg-core text-white shadow-soft hover:bg-core/90",
+    secondary: "border-line bg-panel text-ink hover:border-core/50 hover:bg-core/[0.05]",
+    ghost: "border-transparent bg-transparent text-muted hover:bg-ink/[0.05] hover:text-ink",
   };
 
   return (
     <button
-      className={`inline-flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-medium transition ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-product border px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles[variant]} ${className}`}
       {...props}
     />
   );

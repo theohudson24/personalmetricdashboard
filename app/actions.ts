@@ -15,16 +15,6 @@ import { inferExerciseDetails } from "@/lib/exerciseCatalog";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
 import { normalizeBarcode } from "@/lib/foodDataCentral";
 
-const defaultTodos = [
-  "Log morning body weight",
-  "Log sleep hours",
-  "Score energy, soreness, stress, and mood",
-  "Log first water intake",
-  "Plan protein and calories for the day",
-  "Choose today's training focus",
-  "Review yesterday's nutrition and workout notes",
-];
-
 function revalidateApp() {
   revalidatePath("/");
   revalidatePath("/gym");
@@ -140,10 +130,6 @@ export async function resetTodos(formData: FormData) {
   const date = parseDateInput(formData.get("date"));
 
   await prisma.todoItem.deleteMany({ where: { date, profileId: profile.id } });
-  await prisma.todoItem.createMany({
-    data: defaultTodos.map((title) => ({ date, title, profileId: profile.id })),
-    skipDuplicates: true,
-  });
 
   revalidatePath("/");
 }

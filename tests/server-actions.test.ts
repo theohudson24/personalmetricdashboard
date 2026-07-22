@@ -26,5 +26,14 @@ test("dashboard initialization never recreates tasks after user deletion", async
   const source = await readFile("app/actions.ts", "utf8");
   const initialization = source.slice(source.indexOf("export async function ensureDefaultData"), source.indexOf("export async function updateDailyLog"));
   assert.doesNotMatch(initialization, /todoItem\.(?:create|createMany|delete|deleteMany)/);
-  assert.match(source, /export async function resetTodos/);
+  const reset = source.slice(source.indexOf("export async function resetTodos"), source.indexOf("export async function createWorkout"));
+  assert.match(reset, /todoItem\.deleteMany/);
+  assert.doesNotMatch(reset, /todoItem\.createMany/);
+});
+
+test("new accounts receive no automatic task or self-improvement checklist records", async () => {
+  const actions = await readFile("app/actions.ts", "utf8");
+  const page = await readFile("app/self-improvement/page.tsx", "utf8");
+  assert.doesNotMatch(actions, /defaultTodos/);
+  assert.doesNotMatch(page, /selfImprovementChecklistItem\.createMany/);
 });

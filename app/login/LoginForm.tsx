@@ -10,7 +10,7 @@ export function LoginForm() {
   const [signInMessage, signInAction, signingIn] = useActionState(signIn, null);
   return (
     <div>
-      <form action={signInAction} className="space-y-4 rounded-lg border border-line bg-black/15 p-5">
+      <form action={signInAction} className="space-y-4 rounded-product border border-line bg-panel p-5 shadow-soft">
         <h2 className="text-lg font-semibold">Sign in</h2>
         <Field label="Email"><Input name="email" type="email" autoComplete="email" required /></Field>
         <Field label="Password"><Input name="password" type="password" autoComplete="current-password" minLength={12} required /></Field>

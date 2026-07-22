@@ -309,8 +309,8 @@ export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
               onClick={() => setActiveTab(tab)}
               className={`min-h-10 rounded-md border px-3 text-sm transition ${
                 activeTab === tab
-                  ? "border-core bg-core text-[#07100d]"
-                  : "border-line bg-white/[0.04] text-muted hover:border-core/40 hover:text-ink"
+                  ? "border-core bg-core text-white"
+                  : "border-line bg-ink/[0.04] text-muted hover:border-core/40 hover:text-ink"
               }`}
             >
               {tab}
@@ -422,7 +422,10 @@ export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
           </div>
 
           {filteredHabits.length === 0 ? (
-            <EmptyState message="No matching habits yet. Add one small rule you can repeat today." />
+            <EmptyState
+              title={habits.length ? "No habits match these filters" : "Add your first habit"}
+              message={habits.length ? "Clear the search or change the filters to see your existing habits." : "Create one small, repeatable rule and use daily check-ins to build a history."}
+            />
           ) : (
             <div className="grid gap-3">
               {filteredHabits.map((habit) => {
@@ -431,7 +434,7 @@ export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
                 const streak = currentStreak(habit);
 
                 return (
-                  <article key={habit.id} className="rounded-lg border border-line bg-black/15 p-4">
+                  <article key={habit.id} className="rounded-lg border border-line bg-ink/[0.025] p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -477,7 +480,7 @@ export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
                           <Button type="button" variant="secondary" onClick={() => checkIn(habit, "partial")}>Partial slip</Button>
                           <Button type="button" variant="ghost" onClick={() => checkIn(habit, "relapse")}>Relapse</Button>
                         </div>
-                        <details className="rounded-md border border-line bg-black/15 p-3">
+                        <details className="rounded-md border border-line bg-ink/[0.025] p-3">
                           <summary className="cursor-pointer text-sm font-semibold">Relapse reflection fields</summary>
                           <div className="mt-3 grid gap-3 md:grid-cols-2">
                             <Input placeholder="Trigger" value={relapseDraft.trigger} onChange={(event) => setRelapseDraft((current) => ({ ...current, trigger: event.target.value }))} />
@@ -504,7 +507,7 @@ export function HabitsDashboard({ initialHabits }: { initialHabits: Habit[] }) {
               {habits
                 .filter((habit) => habit.completions.some((entry) => attentionStatus(entry.status)) || completionRate(habit) < 60)
                 .map((habit) => (
-                  <div key={habit.id} className="rounded-md border border-line bg-black/15 p-3">
+                  <div key={habit.id} className="rounded-md border border-line bg-ink/[0.025] p-3">
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-medium">{habit.name}</p>
                       <span className="text-sm text-muted">{completionRate(habit)}%</span>
@@ -562,7 +565,7 @@ function MetricCard({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-line bg-black/15 p-3">
+    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
@@ -584,7 +587,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="grid h-9 w-9 place-items-center rounded-md border border-line bg-black/15 text-muted transition hover:border-core/40 hover:text-core"
+      className="grid h-9 w-9 place-items-center rounded-md border border-line bg-ink/[0.025] text-muted transition hover:border-core/40 hover:text-core"
     >
       {icon}
     </button>

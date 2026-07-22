@@ -23,12 +23,6 @@ export const improvementCategories = [
   { name: "Character & personal qualities", description: "Kindness, accountability, honesty, boundaries, and maturity.", actions: ["Keep one commitment", "Reflect on one interaction", "Practice accountability"], safety: "Character goals are for honest reflection, not performative scoring or manipulation." },
 ] as const;
 
-export const defaultChecklist = [
-  ["Complete morning self-care", "Grooming & hygiene"], ["Brush and floss", "Oral care & smile"],
-  ["Drink water", "Nutrition & hydration"], ["Practice comfortable posture", "Posture & movement"],
-  ["Prepare for consistent sleep", "Sleep & recovery"],
-] as const;
-
 export function todayUtc() { return startOfDay(new Date()); }
 export function weekStartUtc() { const date = todayUtc(); const day = date.getUTCDay(); date.setUTCDate(date.getUTCDate() - (day === 0 ? 6 : day - 1)); return date; }
 

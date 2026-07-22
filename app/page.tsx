@@ -2,7 +2,6 @@ import { ensureDefaultData } from "@/app/actions";
 import { DashboardCompletion, DashboardStatusOverview, type DailyStatus, type StatusItem } from "@/components/dashboard/DashboardStatusOverview";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ConnectionStatus } from "@/components/shared/ConnectionStatus";
 import { dateInputValue, startOfDay } from "@/lib/dates";
 import { completionPercent, countStatus, nutritionTargetProgress } from "@/lib/dashboard";
 import { calculateNutritionTotals } from "@/lib/nutrition";
@@ -54,9 +53,8 @@ export default async function HomePage() {
   const nextMove = completion < 100 ? "Finish or intentionally revise your open priorities." : habits.length && completedHabits < habits.length ? "Complete today’s remaining habit check-ins." : meals.length === 0 ? "Log your first food, drink, snack, or meal." : !workout ? "If today is a training day, log the session; otherwise your daily actions are current." : "Your core daily areas are current. Review details only where you need them.";
 
   return <div>
-    <ConnectionStatus />
     <PageHeader eyebrow="Daily command center" title="Today’s priorities and status" description="See what needs action now; use each dedicated page for detailed analysis and history." />
-    <div className="grid gap-5">
+    <div className="grid gap-8">
       <DashboardStatusOverview items={statuses} nextMove={nextMove}/>
       <section id="daily-priorities"><TodoList todos={todos} date={date}/><DashboardCompletion value={completion}/></section>
     </div>

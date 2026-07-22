@@ -32,7 +32,7 @@ export function MicronutrientGrid({
       />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {items.map(([label, value, goal, unit]) => (
-          <div key={label} className="rounded-md border border-line bg-black/15 p-3">
+          <div key={label} className="rounded-md border border-line bg-ink/[0.025] p-3">
             <StatTile
               label={label}
               value={`${Math.round(value)} / ${Math.round(goal)}`}

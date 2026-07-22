@@ -33,7 +33,7 @@ export default async function SettingsPage() {
         title="Tune the targets behind your growth plan"
         description="Set your body profile, nutrition targets, and display preference."
       />
-      <div className="grid gap-5">
+      <div className="grid gap-8">
         <AccountSettings account={{ displayName: profile.displayName, email: user.email ?? "", emailVerified: Boolean(user.email_confirmed_at), phone: profile.phone ?? "" }} />
         <NutritionGoalsForm
           settings={settings}
@@ -46,8 +46,10 @@ export default async function SettingsPage() {
         <StrongImport />
         <DataPrivacyControls request={deletionRequest} />
         <LegalAcceptance acceptedAt={legalAcceptance?.acceptedAt ?? null} />
-        <Link href="/report-bug" className="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white/[0.07] px-4 text-sm font-medium text-ink">Report a bug</Link>
-        {isAdminEmail(user.email) ? <Link href="/admin" className="inline-flex min-h-11 items-center justify-center rounded-md border border-core/40 bg-core/10 px-4 text-sm font-medium text-core">Open admin dashboard</Link> : null}
+        <div className="flex flex-wrap gap-3 border-t border-line/70 pt-6">
+          <Link href="/report-bug" className="inline-flex min-h-11 items-center justify-center rounded-product border border-line bg-panel px-4 text-sm font-semibold text-ink transition-colors hover:border-core/50">Report a bug</Link>
+          {isAdminEmail(user.email) ? <Link href="/admin" className="inline-flex min-h-11 items-center justify-center rounded-product border border-core/40 bg-core/10 px-4 text-sm font-semibold text-core">Open admin dashboard</Link> : null}
+        </div>
       </div>
     </div>
   );

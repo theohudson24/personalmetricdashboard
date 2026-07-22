@@ -4,7 +4,7 @@ export function InsightCard({ insights }: { insights: string[] }) {
       {insights.map((insight) => (
         <div
           key={insight}
-          className="rounded-md border border-line bg-black/15 px-3 py-2 text-sm text-muted"
+          className="border-l-2 border-core/50 py-2 pl-3 text-sm leading-6 text-muted"
         >
           {insight}
         </div>
