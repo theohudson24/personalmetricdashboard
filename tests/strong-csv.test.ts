@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildStrongImportPlan, parseStrongCsv } from "@/lib/strongCsv";
+import type { PrismaClient } from "@prisma/client";
+import { buildStrongImportPlan, importStrongCsvBatch, parseStrongCsv } from "@/lib/strongCsv";
 
 test("valid Strong CSV data is parsed", () => {
   const rows = parseStrongCsv('Date,Workout Name,Exercise Name,Reps,Weight\n"2026-07-20 10:00:00","Push Day","Bench Press",8,135\n');
@@ -46,4 +47,48 @@ test("non-Strong files are rejected", () => {
 test("malformed quoted fields and duplicate headers are rejected", () => {
   assert.throws(() => parseStrongCsv('Date,Workout Name,Exercise Name\n"unfinished'), /unfinished quoted field/);
   assert.throws(() => parseStrongCsv("Date,Workout Name,Exercise Name,Date\n"), /duplicate column names/);
+});
+
+test("large Strong histories import in bounded, resumable batches", async () => {
+  const header = "Date,Workout Name,Exercise Name,Set Order,Reps,Weight";
+  const rows = Array.from({ length: 30 }, (_, index) => {
+    const day = String(index + 1).padStart(2, "0");
+    return `2026-07-${day} 10:00:00,Workout ${index + 1},Bench Press,1,8,135`;
+  });
+  let creates = 0;
+  const transaction = {
+    workout: {
+      create: async () => { creates += 1; },
+      update: async () => undefined,
+    },
+    exercise: { deleteMany: async () => undefined },
+  };
+  const prisma = {
+    workout: {
+      findUnique: async () => null,
+      findFirst: async () => null,
+    },
+    $transaction: async (callback: (client: typeof transaction) => Promise<void>) => callback(transaction),
+  } as unknown as PrismaClient;
+  const csv = `${header}\n${rows.join("\n")}\n`;
+
+  const first = await importStrongCsvBatch(prisma, "profile-1", csv, 0, 12);
+  assert.equal(first.added, 12);
+  assert.equal(first.nextCursor, 12);
+  assert.equal(first.totalWorkouts, 30);
+  assert.equal(first.done, false);
+  assert.equal(creates, 12);
+
+  const last = await importStrongCsvBatch(prisma, "profile-1", csv, 24, 12);
+  assert.equal(last.added, 6);
+  assert.equal(last.nextCursor, 30);
+  assert.equal(last.done, true);
+  assert.equal(creates, 18);
+});
+
+test("Strong import batches reject unsafe cursors and oversized batches", async () => {
+  const prisma = {} as PrismaClient;
+  const csv = "Date,Workout Name,Exercise Name\n2026-07-20 10:00:00,Push Day,Bench Press\n";
+  await assert.rejects(importStrongCsvBatch(prisma, "profile-1", csv, -1), /cursor/);
+  await assert.rejects(importStrongCsvBatch(prisma, "profile-1", csv, 0, 26), /batch size/);
 });

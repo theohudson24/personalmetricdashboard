@@ -6,32 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultProfile } from "@/lib/profile";
 import { requireUser } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { importStrongCsv } from "@/lib/strongCsv";
 import { emailSet } from "@/lib/access";
 import { normalizePhone } from "@/lib/account";
 import type { SettingsActionState } from "@/lib/actionStates";
-
-export async function uploadStrongCsv(_state: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
-  try {
-    const file = formData.get("file");
-    if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".csv")) return { status: "error", message: "Choose a CSV exported from Strong." };
-    if (file.size > 5_000_000) return { status: "error", message: "The CSV must be smaller than 5 MB." };
-    const profile = await getDefaultProfile();
-    const result = await importStrongCsv(prisma, profile.id, await file.text());
-    revalidatePath("/gym");
-    const summary = `${result.added} added, ${result.updated} updated, ${result.skipped} skipped, ${result.failed} failed`;
-    const failureDetail = result.failures.length ? ` Review: ${result.failures.join(" ")}` : "";
-    return {
-      status: result.failed > 0 ? "error" : "success",
-      message: `Strong import complete: ${summary}. ${result.rows} rows across ${result.workouts} workout groups processed.${failureDetail}`,
-    };
-  }
-  catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    const fileProblem = message.startsWith("This does not look") || message.startsWith("No valid workout") || message.startsWith("Invalid workout date") || message.startsWith("The export is too large");
-    return { status: "error", message: fileProblem ? message : "The Strong import failed on our end. Your existing workouts were not removed; our development team is working to keep imports reliable." };
-  }
-}
 
 export async function updateAccount(_state: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
   const user = await requireUser();
