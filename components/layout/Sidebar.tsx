@@ -53,6 +53,7 @@ export function Sidebar() {
 
         <div className="mt-auto border-t border-white/10 pt-5 text-xs leading-5 text-white/55">
           <Link href="/report-bug" className="mb-3 flex min-h-11 items-center gap-2 rounded-md px-3 text-white/70 hover:bg-white/10 hover:text-white"><Bug size={16}/>Report a bug</Link>
+          <div className="mb-2 flex gap-3"><Link className="underline" href="/legal/privacy">Privacy</Link><Link className="underline" href="/legal/terms">Terms</Link></div>
           Private tracking for training, nutrition, recovery, and daily execution.
         </div>
       </div>

@@ -42,7 +42,7 @@ export default async function MealsPage() {
         <MacroSummaryCard totals={totals} settings={settings} />
         <MicronutrientGrid totals={totals} settings={settings} />
         <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
-          <MealForm />
+          <MealForm draftScope={profile.id} />
           <div className="grid gap-5">
             <NutritionInsights insights={nutritionInsights(totals, settings)} />
           </div>

@@ -8,6 +8,8 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { scaleNutrition, type FoodNutrition, type FoodSearchResult } from "@/lib/foodDataCentral";
 import { BarcodeLookup } from "@/components/meals/BarcodeLookup";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { clearDraft, readDraft, writeDraft } from "@/lib/clientDraft";
 
 type FoodDraft = FoodNutrition & {
   id: string;
@@ -95,10 +97,24 @@ function updatesForWeight(item: FoodDraft, grams: number): Partial<FoodDraft> {
   };
 }
 
-export function MealForm() {
+export function MealForm({ draftScope }: { draftScope: string }) {
   const [entryKind, setEntryKind] = useState<"MEAL" | "ITEM" | "DRINK" | "SNACK">("ITEM");
   const [items, setItems] = useState<FoodDraft[]>([newFoodDraft()]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
+  const restored = useRef(false);
+
+  useEffect(() => {
+    clearDraft("meal");
+    const saved = readDraft<{ entryKind: typeof entryKind; items: FoodDraft[] }>(`${draftScope}:meal`);
+    if (saved?.items?.length) {
+      setEntryKind(saved.entryKind);
+      setItems(saved.items);
+      setExpandedIds(new Set(saved.items.map((item) => item.id)));
+    }
+    restored.current = true;
+  }, [draftScope]);
+
+  useEffect(() => { if (restored.current) writeDraft(`${draftScope}:meal`, { entryKind, items }); }, [draftScope, entryKind, items]);
 
   function updateItem(id: string, updates: Partial<FoodDraft>) {
     setItems((current) =>
@@ -151,7 +167,7 @@ export function MealForm() {
         title="Log food and drinks"
         description="Add one item, drink, or snack quickly—or build a complete meal from multiple ingredients."
       />
-      <form action={createMeal} className="space-y-5">
+      <form action={async (data) => { await createMeal(data); clearDraft(`${draftScope}:meal`); }} className="space-y-5">
         <input type="hidden" name="entryKind" value={entryKind} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Nutrition entry type">
           {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-[#07100d]" : "border-line bg-black/15 text-muted"}`}>{label}</button>)}
@@ -346,7 +362,7 @@ export function MealForm() {
             <Plus size={16} />
             <span className="ml-2">Add food</span>
           </Button> : null}
-          <Button>{entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`}</Button>
+          <SubmitButton idle={entryKind === "MEAL" ? "Save meal" : `Log ${entryKind.toLowerCase()}`} pending="Saving…" />
           {entryKind === "MEAL" ? <label className="flex min-h-11 items-center gap-2 rounded-md border border-line bg-black/15 px-3 text-sm text-muted">
             <input type="checkbox" name="saveAsTemplate" className="accent-[#4db7a7]" />
             Save this meal as a reusable template

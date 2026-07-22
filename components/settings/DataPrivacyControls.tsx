@@ -2,7 +2,8 @@
 
 import { Download, Trash2 } from "lucide-react";
 import { useActionState } from "react";
-import { cancelAccountDeletion, idleDeletionState, requestAccountDeletion } from "@/app/settings/data-actions";
+import { cancelAccountDeletion, requestAccountDeletion } from "@/app/settings/data-actions";
+import { idleDeletionState } from "@/lib/actionStates";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Textarea } from "@/components/ui/Input";

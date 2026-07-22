@@ -31,6 +31,7 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
   function stopScan() { controlsRef.current?.stop(); controlsRef.current = null; setScanning(false); }
 
   async function startScan() {
+    if (!window.isSecureContext) { setError("Camera scanning requires HTTPS. Open the secure deployed site, or enter the barcode manually."); return; }
     if (!navigator.mediaDevices?.getUserMedia) { setError("This browser cannot access a camera. Enter the barcode below instead."); return; }
     try {
       setScanning(true); setError("");
@@ -43,7 +44,7 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
         videoRef.current,
         (result) => { if (result?.getText()) void lookup(result.getText()); },
       );
-    } catch (cause) { setError(cause instanceof Error && cause.name === "NotAllowedError" ? "Camera permission was denied. Allow camera access in your browser settings or enter the barcode manually." : "The camera could not start. Enter the barcode manually or try another browser."); stopScan(); }
+    } catch (cause) { setError(cause instanceof Error && cause.name === "NotAllowedError" ? "Camera access is blocked. On iPhone, open Safari Settings → Websites → Camera; on Android, open the site permissions in your browser. Allow access, reload, or enter the barcode manually." : "The camera could not start. Use current Safari or Chrome over HTTPS, or enter the barcode manually."); stopScan(); }
   }
 
   useEffect(() => () => controlsRef.current?.stop(), []);
@@ -54,6 +55,6 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
     {scanning ? <video ref={videoRef} muted playsInline className="mt-3 max-h-64 w-full rounded-md bg-black object-cover" /> : null}
     <div className="mt-3 flex gap-2"><div className="relative flex-1"><Keyboard size={16} className="absolute left-3 top-3.5 text-muted"/><Input className="pl-9" inputMode="numeric" value={barcode} onChange={(e) => setBarcode(e.target.value.replace(/\D/g, ""))} placeholder="UPC / EAN barcode" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void lookup(); } }}/></div>
       <Button type="button" onClick={() => void lookup()} disabled={loading}><ScanBarcode size={16}/><span className="ml-2">{loading ? "Looking up…" : "Find item"}</span></Button></div>
-    {error ? <p className="mt-2 text-sm text-ember" role="alert">{error}</p> : null}
+    {error ? <div className="mt-2 flex flex-wrap items-center gap-2" role="alert"><p className="text-sm text-ember">{error}</p>{!navigator.onLine ? <Button type="button" variant="secondary" onClick={() => void lookup()} disabled={loading}>Retry when connected</Button> : null}</div> : null}
   </div>;
 }

@@ -60,33 +60,74 @@ model Profile {
   deletionRequests       AccountDeletionRequest[]
   habits                 Habit[]
   selfImprovementGoals   SelfImprovementGoal[]
+  goalProgressEntries    SelfImprovementGoalProgress[]
   selfImprovementMetrics SelfImprovementMetric[]
   selfImprovementChecks  SelfImprovementCheckIn[]
   selfImprovementPhotos  SelfImprovementPhoto[]
   improvementRoutines    SelfImprovementRoutine[]
   improvementChecklist   SelfImprovementChecklistItem[]
   improvementReviews     SelfImprovementWeeklyReview[]
+  legalAcceptances       LegalAcceptance[]
+  performanceMetrics     PerformanceMetric[]
+}
+
+model LegalAcceptance {
+  id             String   @id @default(cuid())
+  profileId      String
+  termsVersion   String
+  privacyVersion String
+  acceptedAt     DateTime @default(now())
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, termsVersion, privacyVersion])
+  @@index([profileId, acceptedAt])
+}
+
+model RateLimitBucket {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+model PerformanceMetric {
+  id         String   @id @default(cuid())
+  profileId  String
+  route      String
+  name       String
+  value      Float
+  rating     String
+  deviceClass String?
+  environment String   @default("production")
+  createdAt  DateTime @default(now())
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([createdAt])
 }
 
 model Habit {
-  id           String            @id @default(cuid())
+  id           String                     @id @default(cuid())
   profileId    String
   name         String
   type         String
   category     String
   difficulty   String
   frequency    String
-  targetAmount String            @default("")
-  reminderTime String            @default("")
-  reason       String            @default("")
-  notes        String            @default("")
-  status       String            @default("Active")
-  bestStreak   Int               @default(0)
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  profile      Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  targetAmount String                     @default("")
+  reminderTime String                     @default("")
+  reason       String                     @default("")
+  notes        String                     @default("")
+  status       String                     @default("Active")
+  bestStreak   Int                        @default(0)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  profile      Profile                    @relation(fields: [profileId], references: [id], onDelete: Cascade)
   completions  HabitCompletion[]
   relapses     HabitRelapse[]
+  goalLinks    SelfImprovementGoalHabit[]
 
   @@index([profileId])
   @@index([profileId, status])
@@ -123,23 +164,64 @@ model HabitRelapse {
 }
 
 model SelfImprovementGoal {
-  id           String    @id @default(cuid())
-  profileId    String
-  title        String
-  category     String
-  currentValue Float     @default(0)
-  targetValue  Float     @default(100)
-  deadline     DateTime?
-  priority     String    @default("Medium")
-  progress     Int       @default(0)
-  linkedHabits String    @default("")
-  status       String    @default("Not Started")
-  notes        String    @default("")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id              String                        @id @default(cuid())
+  profileId       String
+  title           String
+  category        String
+  currentValue    Float                         @default(0)
+  baselineValue   Float                         @default(0)
+  targetValue     Float                         @default(100)
+  unit            String                        @default("units")
+  measurementMode String                        @default("MANUAL")
+  deadline        DateTime?
+  priority        String                        @default("Medium")
+  progress        Int                           @default(0)
+  linkedHabits    String                        @default("")
+  status          String                        @default("Not Started")
+  notes           String                        @default("")
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  profile         Profile                       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  habitLinks      SelfImprovementGoalHabit[]
+  routineLinks    SelfImprovementGoalRoutine[]
+  progressEntries SelfImprovementGoalProgress[]
 
   @@index([profileId, status])
+}
+
+model SelfImprovementGoalHabit {
+  goalId  String
+  habitId String
+  goal    SelfImprovementGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  habit   Habit               @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@id([goalId, habitId])
+  @@index([habitId])
+}
+
+model SelfImprovementGoalRoutine {
+  goalId    String
+  routineId String
+  goal      SelfImprovementGoal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  routine   SelfImprovementRoutine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@id([goalId, routineId])
+  @@index([routineId])
+}
+
+model SelfImprovementGoalProgress {
+  id         String              @id @default(cuid())
+  profileId  String
+  goalId     String
+  value      Float
+  note       String              @default("")
+  source     String              @default("MANUAL")
+  recordedAt DateTime            @default(now())
+  profile    Profile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  goal       SelfImprovementGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, recordedAt])
+  @@index([profileId, recordedAt])
 }
 
 model SelfImprovementMetric {
@@ -216,6 +298,7 @@ model SelfImprovementRoutine {
   updatedAt        DateTime                     @updatedAt
   profile          Profile                      @relation(fields: [profileId], references: [id], onDelete: Cascade)
   tasks            SelfImprovementRoutineTask[]
+  goalLinks        SelfImprovementGoalRoutine[]
 
   @@index([profileId, archived])
 }
@@ -252,6 +335,7 @@ model SelfImprovementWeeklyReview {
   weekStart          DateTime
   wentWell           String
   difficult          String
+  evidence           String   @default("")
   improvedCategory   String
   attentionCategory  String
   confidence         Int
@@ -303,20 +387,21 @@ model TodoItem {
 }
 
 model Workout {
-  id              String     @id @default(cuid())
-  profileId       String
-  date            DateTime
-  name            String
-  duration        String?
-  durationMinutes Int?
-  muscleGroups    String
-  notes           String?
-  source          String     @default("manual")
-  externalId      String?
-  exercises       Exercise[]
-  profile         Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                String     @id @default(cuid())
+  profileId         String
+  date              DateTime
+  name              String
+  duration          String?
+  durationMinutes   Int?
+  muscleGroups      String
+  notes             String?
+  source            String     @default("manual")
+  externalId        String?
+  importFingerprint String?
+  exercises         Exercise[]
+  profile           Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   @@unique([profileId, source, externalId])
   @@index([date])

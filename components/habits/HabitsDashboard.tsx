@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Input, Select, Textarea } from "@/components/ui/Input";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { deleteHabitRecord, saveHabitCheckIn, saveHabitRecord, updateHabitStatusRecord } from "@/app/habits/actions";
+import { habitCompletionRate, habitCurrentStreak, isSuccessfulHabitStatus } from "@/lib/habits";
 
 type HabitType = "build" | "kick";
 type HabitCategory =
@@ -96,7 +97,7 @@ function dateOffset(days: number) {
 }
 
 function successful(status: CompletionStatus) {
-  return status === "completed" || status === "clean";
+  return isSuccessfulHabitStatus(status);
 }
 
 function attentionStatus(status: CompletionStatus) {
@@ -104,22 +105,11 @@ function attentionStatus(status: CompletionStatus) {
 }
 
 function currentStreak(habit: Habit) {
-  let streak = 0;
-
-  for (let index = 0; index < 60; index += 1) {
-    const date = dateOffset(index);
-    const completion = habit.completions.find((entry) => entry.date === date);
-    if (!completion || !successful(completion.status)) break;
-    streak += 1;
-  }
-
-  return streak;
+  return habitCurrentStreak(habit.completions, new Date(), 366);
 }
 
 function completionRate(habit: Habit) {
-  if (habit.completions.length === 0) return 0;
-  const wins = habit.completions.filter((entry) => successful(entry.status)).length;
-  return Math.round((wins / habit.completions.length) * 100);
+  return habitCompletionRate(habit.completions);
 }
 
 function statusTone(status: HabitStatus | CompletionStatus) {

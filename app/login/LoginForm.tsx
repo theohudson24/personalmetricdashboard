@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { signIn } from "@/app/login/actions";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
+import Link from "next/link";
 
 export function LoginForm() {
   const [signInMessage, signInAction, signingIn] = useActionState(signIn, null);
@@ -15,6 +16,7 @@ export function LoginForm() {
         <Field label="Password"><Input name="password" type="password" autoComplete="current-password" minLength={12} required /></Field>
         {signInMessage ? <p className="text-sm text-muted" role="status">{signInMessage}</p> : null}
         <Button disabled={signingIn}>{signingIn ? "Signing in…" : "Sign in"}</Button>
+        <Link href="/auth/reset" className="block text-sm text-core underline">Forgot password?</Link>
       </form>
     </div>
   );

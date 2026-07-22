@@ -5,9 +5,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getDefaultProfile } from "@/lib/profile";
 import { prisma } from "@/lib/prisma";
-
-export type DeletionState = { status: "idle" | "success" | "error"; message: string };
-export const idleDeletionState: DeletionState = { status: "idle", message: "" };
+import type { DeletionState } from "@/lib/actionStates";
 
 export async function requestAccountDeletion(_state: DeletionState, formData: FormData): Promise<DeletionState> {
   const user = await requireUser(); const profile = await getDefaultProfile();

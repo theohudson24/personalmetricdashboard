@@ -1,12 +1,14 @@
 "use client";
 
 import { Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createWorkout } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Input, Textarea } from "@/components/ui/Input";
+import { SubmitButton } from "@/components/ui/SubmitButton";
+import { clearDraft, readDraft, writeDraft } from "@/lib/clientDraft";
 
 type SetDraft = {
   id: string;
@@ -76,6 +78,7 @@ export function WorkoutForm({
   exerciseOptions,
   workoutNameOptions,
   templates,
+  draftScope,
 }: {
   exerciseOptions: Array<{
     name: string;
@@ -84,12 +87,28 @@ export function WorkoutForm({
   }>;
   workoutNameOptions: string[];
   templates: WorkoutTemplate[];
+  draftScope: string;
 }) {
   const [isLogging, setIsLogging] = useState(false);
   const [workoutName, setWorkoutName] = useState("");
   const [workoutNotes, setWorkoutNotes] = useState("");
   const [exercises, setExercises] = useState<ExerciseDraft[]>([]);
   const [formKey, setFormKey] = useState(crypto.randomUUID());
+  const restored = useRef(false);
+
+  useEffect(() => {
+    clearDraft("workout");
+    const saved = readDraft<{ workoutName: string; workoutNotes: string; exercises: ExerciseDraft[] }>(`${draftScope}:workout`);
+    if (saved?.exercises?.length) {
+      setWorkoutName(saved.workoutName);
+      setWorkoutNotes(saved.workoutNotes);
+      setExercises(saved.exercises);
+      setIsLogging(true);
+    }
+    restored.current = true;
+  }, [draftScope]);
+
+  useEffect(() => { if (restored.current && isLogging) writeDraft(`${draftScope}:workout`, { workoutName, workoutNotes, exercises }); }, [draftScope, exercises, isLogging, workoutName, workoutNotes]);
 
   function startBlankWorkout() {
     setWorkoutName("");
@@ -198,7 +217,7 @@ export function WorkoutForm({
         title="Workout logger"
         description="Create a workout with exercises, sets, reps, and weight."
       />
-      <form key={formKey} action={createWorkout} className="space-y-5">
+      <form key={formKey} action={async (data) => { await createWorkout(data); clearDraft(`${draftScope}:workout`); }} className="space-y-5">
         <datalist id="workout-name-options">
           {[...new Set([...workoutTypes, ...workoutNameOptions])].map((name) => (
             <option key={name} value={name} />
@@ -224,6 +243,7 @@ export function WorkoutForm({
               list="workout-name-options"
               placeholder="Push day"
               defaultValue={workoutName}
+              onChange={(event) => setWorkoutName(event.target.value)}
               required
             />
           </Field>
@@ -233,6 +253,7 @@ export function WorkoutForm({
             name="notes"
             placeholder="Energy, focus, pump, recovery..."
             defaultValue={workoutNotes}
+            onChange={(event) => setWorkoutNotes(event.target.value)}
           />
         </Field>
 
@@ -258,6 +279,7 @@ export function WorkoutForm({
                     list="exercise-name-options"
                     placeholder="Bench press"
                     defaultValue={exercise.name}
+                    onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, name: event.target.value } : entry))}
                     required
                   />
                 </Field>
@@ -268,6 +290,7 @@ export function WorkoutForm({
                     name="exerciseNotes"
                     placeholder="Grip, tempo, form notes"
                     defaultValue={exercise.notes}
+                    onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, notes: event.target.value } : entry))}
                   />
                 </Field>
               </div>
@@ -285,6 +308,7 @@ export function WorkoutForm({
                       min="0"
                       placeholder={`Set ${setIndex + 1} reps`}
                       defaultValue={set.reps}
+                      onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, sets: entry.sets.map((row) => row.id === set.id ? { ...row, reps: event.target.value === "" ? "" : Number(event.target.value) } : row) } : entry))}
                       required
                     />
                     <Input
@@ -294,12 +318,14 @@ export function WorkoutForm({
                       min="0"
                       placeholder="Weight"
                       defaultValue={set.weight}
+                      onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, sets: entry.sets.map((row) => row.id === set.id ? { ...row, weight: event.target.value === "" ? "" : Number(event.target.value) } : row) } : entry))}
                       required
                     />
                     <select
                       name="setType"
                       defaultValue={set.setType}
                       aria-label={`Set ${setIndex + 1} type`}
+                      onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, sets: entry.sets.map((row) => row.id === set.id ? { ...row, setType: event.target.value } : row) } : entry))}
                       className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
                     >
                       <option value="WORKING">Working</option>
@@ -344,7 +370,7 @@ export function WorkoutForm({
             <Plus size={16} />
             <span className="ml-2">Add exercise</span>
           </Button>
-          <Button>Save workout</Button>
+          <SubmitButton idle="Save workout" pending="Saving workout…" />
           <Button type="button" variant="ghost" onClick={() => setIsLogging(false)}>
             Cancel
           </Button>

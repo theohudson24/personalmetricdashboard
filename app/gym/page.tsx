@@ -116,6 +116,7 @@ export default async function GymPage() {
           exerciseOptions={exerciseOptions}
           workoutNameOptions={workoutNameRows.map((workout) => workout.name)}
           templates={templates}
+          draftScope={profile.id}
         />
         <GymProgressCards
           exercisePoints={exerciseProgressSeries(progressWorkouts)}

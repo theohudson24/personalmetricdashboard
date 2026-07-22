@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractNutrition, nutritionQuality, type FoodSearchResult } from "@/lib/foodDataCentral";
 import { requireUser } from "@/lib/auth";
+import { consumeRateLimit, privateRateLimitKey } from "@/lib/rateLimit";
 
 type FdcSearchFood = {
   fdcId: number;
@@ -17,7 +18,9 @@ type FdcSearchFood = {
 };
 
 export async function GET(request: Request) {
-  await requireUser();
+  const user = await requireUser();
+  const rate = await consumeRateLimit(privateRateLimitKey("food-search", user.id), 60, 60 * 1000);
+  if (!rate.allowed) return NextResponse.json({ error: "Too many searches. Wait briefly and try again.", foods: [] }, { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } });
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim();
 
