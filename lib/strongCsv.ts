@@ -14,6 +14,13 @@ export type StrongImportSummary = {
   failures: string[];
 };
 
+export type StrongImportBatch = StrongImportSummary & {
+  cursor: number;
+  nextCursor: number;
+  totalWorkouts: number;
+  done: boolean;
+};
+
 type NormalizedSet = {
   setNumber: number;
   setType: string;
@@ -133,6 +140,47 @@ export async function importStrongCsv(prisma: PrismaClient, profileId: string, c
   };
 
   for (const plan of prepared.plans) {
+    try {
+      const result = await importWorkout(prisma, profileId, plan);
+      summary[result] += 1;
+    } catch {
+      summary.failed += 1;
+      if (summary.failures.length < 10) summary.failures.push(`${plan.name} on ${plan.date.toISOString().slice(0, 10)} could not be imported.`);
+    }
+  }
+
+  return summary;
+}
+
+export async function importStrongCsvBatch(
+  prisma: PrismaClient,
+  profileId: string,
+  content: string,
+  cursor: number,
+  batchSize = 12,
+): Promise<StrongImportBatch> {
+  if (!Number.isSafeInteger(cursor) || cursor < 0) throw new Error("The import cursor is invalid.");
+  if (!Number.isSafeInteger(batchSize) || batchSize < 1 || batchSize > 25) throw new Error("The import batch size is invalid.");
+
+  const prepared = buildStrongImportPlan(content);
+  if (cursor > prepared.plans.length) throw new Error("The import cursor is outside this file.");
+
+  const end = Math.min(cursor + batchSize, prepared.plans.length);
+  const summary: StrongImportBatch = {
+    added: 0,
+    updated: 0,
+    skipped: 0,
+    failed: cursor === 0 ? prepared.failures.length : 0,
+    rows: prepared.rows,
+    workouts: prepared.plans.length + prepared.failures.length,
+    failures: cursor === 0 ? prepared.failures.slice(0, 10) : [],
+    cursor,
+    nextCursor: end,
+    totalWorkouts: prepared.plans.length,
+    done: end >= prepared.plans.length,
+  };
+
+  for (const plan of prepared.plans.slice(cursor, end)) {
     try {
       const result = await importWorkout(prisma, profileId, plan);
       summary[result] += 1;
