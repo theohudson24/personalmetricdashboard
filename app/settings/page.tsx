@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
 import { requireUser } from "@/lib/auth";
 import { AccountSettings } from "@/components/settings/AccountSettings";
-import { StrongImport } from "@/components/settings/StrongImport";
+import { DataImport } from "@/components/settings/DataImport";
 import Link from "next/link";
 import { DataPrivacyControls } from "@/components/settings/DataPrivacyControls";
 import { isAdminEmail } from "@/lib/access";
@@ -43,7 +43,7 @@ export default async function SettingsPage() {
         />
         <ThemePreference />
         <InstallAppCard />
-        <StrongImport />
+        <DataImport />
         <DataPrivacyControls request={deletionRequest} />
         <LegalAcceptance acceptedAt={legalAcceptance?.acceptedAt ?? null} />
         <div className="flex flex-wrap gap-3 border-t border-line/70 pt-6">

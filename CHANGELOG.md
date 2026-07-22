@@ -12,7 +12,8 @@ Notable project changes are recorded here. This project follows a simple private
 - Supabase authentication and account-scoped persistence
 - Vercel production and preview deployments
 - Dashboard, habits, workouts, meals, nutrition, and Self-improvement features
-- Barcode lookup and Strong CSV import
+- Barcode lookup and retry-safe Strong CSV import
+- Cronometer daily nutrition, serving history, and biometric imports
 - Profile settings, themes, data export, and deletion requests
 - Bug reporting, privacy-filtered error monitoring, and admin review tools
 - Automated security and domain tests

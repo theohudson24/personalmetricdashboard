@@ -10,7 +10,8 @@ A private, account-based dashboard for habits, training, nutrition, and self-imp
 
 - Daily dashboard, tasks, health markers, and progress summaries
 - Cross-device habit tracking and completion history
-- Workout logging, templates, progress insights, and Strong CSV import
+- Workout logging, templates, progress insights, and retry-safe Strong CSV import
+- Cronometer daily nutrition, food/recipe serving, and biometric CSV imports
 - Meal, snack, drink, and individual-item logging
 - USDA FoodData Central search and UPC/EAN barcode lookup
 - Saved meals, recent-food history, and editable nutrition targets

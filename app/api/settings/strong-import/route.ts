@@ -9,6 +9,15 @@ export const maxDuration = 60;
 const maxFileSize = 5_000_000;
 const batchSize = 12;
 
+function sameOrigin(request: Request) {
+  try {
+    const origin = request.headers.get("origin");
+    return Boolean(origin && new URL(origin).host === new URL(request.url).host);
+  } catch {
+    return false;
+  }
+}
+
 function userFileError(message: string) {
   return message.startsWith("This does not look")
     || message.startsWith("No valid workout")
@@ -21,8 +30,7 @@ function userFileError(message: string) {
 
 export async function POST(request: Request) {
   try {
-    const origin = request.headers.get("origin");
-    if (!origin || new URL(origin).host !== new URL(request.url).host) {
+    if (!sameOrigin(request)) {
       return NextResponse.json({ message: "This import request was not accepted." }, { status: 403 });
     }
     const profile = await getDefaultProfile();
@@ -42,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const result = await importStrongCsvBatch(prisma, profile.id, await file.text(), cursor, batchSize);
-    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     return NextResponse.json(
