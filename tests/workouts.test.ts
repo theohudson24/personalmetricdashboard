@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { estimatedOneRepMax, exerciseProgressSeries, workoutComparisonEntries, workoutVolume, type WorkoutWithExercises } from "@/lib/workouts";
+import { estimatedOneRepMax, exerciseProgressSeries, workoutChartScale, workoutComparisonEntries, workoutVolume, type WorkoutWithExercises } from "@/lib/workouts";
 
 function workout(id: string, date: string, weight: number, reps: number): WorkoutWithExercises {
   return {
@@ -40,4 +40,16 @@ test("workout comparisons use the prior matching session", () => {
   assert.equal(comparisons[0].previous?.id, "one");
   assert.equal(comparisons[0].volumeDelta, 80);
   assert.equal(comparisons[0].exerciseComparisons[0].topWeightDelta, 10);
+});
+
+test("workout chart axes use consistent readable increments", () => {
+  assert.deepEqual(workoutChartScale([40, 45, 55, 60]), {
+    min: 40,
+    max: 60,
+    step: 5,
+    ticks: [40, 45, 50, 55, 60],
+  });
+  assert.equal(workoutChartScale([100, 155]).step, 10);
+  assert.equal(workoutChartScale([1000, 1250]).step, 50);
+  assert.deepEqual(workoutChartScale([55, 55]).ticks, [50, 55, 60]);
 });

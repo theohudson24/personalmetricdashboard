@@ -1,4 +1,3 @@
-import { ensureDefaultData } from "@/app/actions";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MacroSummaryCard } from "@/components/meals/MacroSummaryCard";
 import { MealForm } from "@/components/meals/MealForm";
@@ -15,7 +14,6 @@ import { getDefaultProfile } from "@/lib/profile";
 export const dynamic = "force-dynamic";
 
 export default async function MealsPage() {
-  await ensureDefaultData();
   const profile = await getDefaultProfile();
 
   const today = startOfDay();

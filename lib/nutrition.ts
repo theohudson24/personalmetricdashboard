@@ -38,6 +38,36 @@ export const emptyTotals: NutritionTotals = {
   zinc: 0,
 };
 
+export type NutritionGoalTone = "default" | "success" | "warning" | "danger";
+
+export function nutritionGoalTone(
+  value: number,
+  goal: number,
+  mode: "target" | "limit" = "target",
+): NutritionGoalTone {
+  if (!Number.isFinite(value) || !Number.isFinite(goal) || goal <= 0 || value < 0) return "default";
+  const ratio = value / goal;
+
+  if (mode === "limit") {
+    if (ratio < 0.9) return "default";
+    if (ratio <= 1) return "success";
+    if (ratio <= 1.2) return "warning";
+    return "danger";
+  }
+
+  if (ratio < 1) return "default";
+  if (ratio <= 1.2) return "success";
+  if (ratio <= 1.5) return "warning";
+  return "danger";
+}
+
+export function nutritionGoalStatus(tone: NutritionGoalTone, mode: "target" | "limit" = "target") {
+  if (tone === "success") return mode === "limit" ? "Near limit" : "Goal reached";
+  if (tone === "warning") return "Above goal";
+  if (tone === "danger") return "Well above goal";
+  return "In progress";
+}
+
 export function calculateNutritionTotals(items: FoodItem[]): NutritionTotals {
   return items.reduce(
     (totals, item) => ({
