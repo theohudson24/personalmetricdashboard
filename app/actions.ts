@@ -15,23 +15,6 @@ import { inferExerciseDetails } from "@/lib/exerciseCatalog";
 import { calculateNutritionRecommendation } from "@/lib/recommendations";
 import { normalizeBarcode } from "@/lib/foodDataCentral";
 
-function revalidateApp() {
-  revalidatePath("/");
-  revalidatePath("/gym");
-  revalidatePath("/meals");
-  revalidatePath("/settings");
-}
-
-export async function ensureDefaultData() {
-  const profile = await getDefaultProfile();
-  const settings = await prisma.userSettings.findUnique({ where: { profileId: profile.id } });
-
-  if (!settings) {
-    await prisma.userSettings.create({ data: { profileId: profile.id } });
-  }
-
-}
-
 export async function updateDailyLog(formData: FormData) {
   const profile = await getDefaultProfile();
   const date = parseDateInput(formData.get("date"));
@@ -64,7 +47,7 @@ export async function updateDailyLog(formData: FormData) {
     },
   });
 
-  revalidateApp();
+  revalidatePath("/gym");
 }
 
 export type AddTodoState = { status: "idle" | "success" | "error"; message: string };
@@ -249,7 +232,8 @@ export async function createWorkout(formData: FormData) {
     });
   }
 
-  revalidateApp();
+  revalidatePath("/");
+  revalidatePath("/gym");
 }
 
 export async function createBodyMeasurement(formData: FormData) {
@@ -270,7 +254,9 @@ export async function createBodyMeasurement(formData: FormData) {
   revalidatePath("/gym");
 }
 
-export async function createMeal(formData: FormData) {
+export type CreateMealResult = { status: "success" | "error"; message: string };
+
+export async function createMeal(formData: FormData): Promise<CreateMealResult> {
   const profile = await getDefaultProfile();
   const entryKind = ["MEAL", "ITEM", "DRINK", "SNACK"].includes(stringValue(formData, "entryKind")) ? stringValue(formData, "entryKind") : "MEAL";
   const itemNames = formData.getAll("foodName").map(String);
@@ -302,7 +288,7 @@ export async function createMeal(formData: FormData) {
     .filter((item) => item.name);
 
   if (foodItems.length === 0) {
-    return;
+    return { status: "error", message: "Add at least one named item before saving." };
   }
   const mealName = entryKind === "MEAL" ? stringValue(formData, "mealName", "Meal") : foodItems[0].name;
 
@@ -352,7 +338,9 @@ export async function createMeal(formData: FormData) {
     });
   }
 
-  revalidateApp();
+  revalidatePath("/");
+  revalidatePath("/meals");
+  return { status: "success", message: entryKind === "MEAL" ? "Meal saved." : "Item logged." };
 }
 
 export async function reuseMealTemplate(formData: FormData) {
@@ -402,7 +390,8 @@ export async function deleteMeal(formData: FormData) {
   const id = stringValue(formData, "id");
   if (!id) return;
   await prisma.meal.deleteMany({ where: { id, profileId: profile.id } });
-  revalidateApp();
+  revalidatePath("/");
+  revalidatePath("/meals");
 }
 
 export async function updateMeal(formData: FormData) {
@@ -421,7 +410,8 @@ export async function updateMeal(formData: FormData) {
     prisma.meal.updateMany({ where: { id, profileId: profile.id }, data: { mealName: stringValue(formData, "mealName", "Meal"), notes: optionalString(formData, "notes") } }),
     prisma.foodItem.createMany({ data: foodItems.map((item) => ({ ...item, mealId: id })) }),
   ]);
-  revalidateApp();
+  revalidatePath("/");
+  revalidatePath("/meals");
 }
 
 export type SettingsSaveResult = { status: "saved" | "error" | "conflict"; message: string; updatedAt?: string };
@@ -515,7 +505,10 @@ export async function updateSettings(formData: FormData): Promise<SettingsSaveRe
     if (!saved.count) throw new Error("SETTINGS_CONFLICT");
   });
 
-  revalidateApp();
+  revalidatePath("/");
+  revalidatePath("/gym");
+  revalidatePath("/meals");
+  revalidatePath("/settings");
   const updated = await prisma.userSettings.findUniqueOrThrow({ where: { id: existing.id }, select: { updatedAt: true } });
   return { status: "saved", message: "All changes saved.", updatedAt: updated.updatedAt.toISOString() };
   } catch (error) {

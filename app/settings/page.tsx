@@ -1,4 +1,3 @@
-import { ensureDefaultData } from "@/app/actions";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NutritionGoalsForm } from "@/components/meals/NutritionGoalsForm";
 import { ThemePreference } from "@/components/settings/ThemePreference";
@@ -18,13 +17,14 @@ import { PRIVACY_VERSION, TERMS_VERSION } from "@/lib/legal";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  await ensureDefaultData();
   const profile = await getDefaultProfile();
   const user = await requireUser();
-  const settings = await prisma.userSettings.findUniqueOrThrow({ where: { profileId: profile.id } });
+  const [settings, deletionRequest, legalAcceptance] = await Promise.all([
+    prisma.userSettings.findUniqueOrThrow({ where: { profileId: profile.id } }),
+    prisma.accountDeletionRequest.findFirst({ where: { profileId: profile.id, status: { in: ["REQUESTED", "APPROVED", "REJECTED"] } }, select: { id: true, status: true }, orderBy: { createdAt: "desc" } }),
+    prisma.legalAcceptance.findUnique({ where: { profileId_termsVersion_privacyVersion: { profileId: profile.id, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } }, select: { acceptedAt: true } }),
+  ]);
   const recommendation = calculateNutritionRecommendation(profile);
-  const deletionRequest = await prisma.accountDeletionRequest.findFirst({ where: { profileId: profile.id, status: { in: ["REQUESTED", "APPROVED", "REJECTED"] } }, select: { id: true, status: true }, orderBy: { createdAt: "desc" } });
-  const legalAcceptance = await prisma.legalAcceptance.findUnique({ where: { profileId_termsVersion_privacyVersion: { profileId: profile.id, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } }, select: { acceptedAt: true } });
 
   return (
     <div>

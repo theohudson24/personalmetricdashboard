@@ -101,7 +101,10 @@ export function MealForm({ draftScope }: { draftScope: string }) {
   const [entryKind, setEntryKind] = useState<"MEAL" | "ITEM" | "DRINK" | "SNACK">("ITEM");
   const [items, setItems] = useState<FoodDraft[]>([newFoodDraft()]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(items.map((item) => item.id)));
+  const [resetKey, setResetKey] = useState(0);
+  const [submitMessage, setSubmitMessage] = useState("");
   const restored = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     clearDraft("meal");
@@ -161,13 +164,31 @@ export function MealForm({ draftScope }: { draftScope: string }) {
     });
   }
 
+  async function submitMeal(data: FormData) {
+    setSubmitMessage("");
+    const result = await createMeal(data);
+    if (result.status !== "success") {
+      setSubmitMessage(result.message);
+      return;
+    }
+
+    const next = newFoodDraft();
+    clearDraft(`${draftScope}:meal`);
+    formRef.current?.reset();
+    setEntryKind("ITEM");
+    setItems([next]);
+    setExpandedIds(new Set([next.id]));
+    setResetKey((current) => current + 1);
+    setSubmitMessage("Saved. The logger is ready for a new entry.");
+  }
+
   return (
     <Card>
       <CardHeader
         title="Log food and drinks"
         description="Add one item, drink, or snack quickly—or build a complete meal from multiple ingredients."
       />
-      <form action={async (data) => { await createMeal(data); clearDraft(`${draftScope}:meal`); }} className="space-y-5">
+      <form ref={formRef} action={submitMeal} className="space-y-5">
         <input type="hidden" name="entryKind" value={entryKind} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Nutrition entry type">
           {([['ITEM','Item'],['DRINK','Drink'],['SNACK','Snack'],['MEAL','Build a meal']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => { setEntryKind(value); if (value !== "MEAL") { setItems((current) => [current[0]]); setExpandedIds(new Set([items[0].id])); } }} className={`min-h-11 rounded-md border px-3 text-sm font-medium ${entryKind === value ? "border-core bg-core text-white" : "border-line bg-ink/[0.025] text-muted"}`}>{label}</button>)}
@@ -194,7 +215,7 @@ export function MealForm({ draftScope }: { draftScope: string }) {
           <Textarea name="notes" />
         </Field>
 
-        <BarcodeLookup onFound={(food) => applyFoodResult(items.find((item) => expandedIds.has(item.id)) ?? items[items.length - 1], food)} />
+        <BarcodeLookup key={resetKey} onFound={(food) => applyFoodResult(items.find((item) => expandedIds.has(item.id)) ?? items[items.length - 1], food)} />
 
         <div className="space-y-4">
           {items.map((item, index) => (
@@ -368,6 +389,7 @@ export function MealForm({ draftScope }: { draftScope: string }) {
             Save this meal as a reusable template
           </label> : null}
         </div>
+        {submitMessage ? <p className="text-sm text-muted" role="status" aria-live="polite">{submitMessage}</p> : null}
       </form>
     </Card>
   );

@@ -130,13 +130,13 @@ export function DataImport() {
     <Card>
       <CardHeader title="Import your data" description="Bring existing records into your private profile. Large histories are saved in retry-safe batches." />
       <form onSubmit={submit} className="space-y-4">
-        <label className="block text-sm font-medium">
-          Import from
-          <Select value={source} onChange={(event) => { setSource(event.target.value as Source); reset(); }} disabled={pending} className="mt-2 max-w-sm">
+        <div className="grid max-w-md gap-2 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-center">
+          <label htmlFor="import-source" className="text-sm font-medium text-ink">Import from</label>
+          <Select id="import-source" value={source} onChange={(event) => { setSource(event.target.value as Source); reset(); }} disabled={pending}>
             <option value="strong">Strong</option>
             <option value="cronometer">Cronometer</option>
           </Select>
-        </label>
+        </div>
 
         {source === "strong" ? (
           <FileField inputRef={strongRef} label="Strong workout CSV" help="Select the CSV exported from Strong." disabled={pending} onChange={reset} required />

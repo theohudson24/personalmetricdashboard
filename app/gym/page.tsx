@@ -1,4 +1,3 @@
-import { ensureDefaultData } from "@/app/actions";
 import { GymProgressCards } from "@/components/gym/GymProgressCards";
 import { TrainingInsights } from "@/components/gym/TrainingInsights";
 import { WorkoutForm } from "@/components/gym/WorkoutForm";
@@ -20,27 +19,18 @@ import { getDefaultProfile } from "@/lib/profile";
 export const dynamic = "force-dynamic";
 
 export default async function GymPage() {
-  await ensureDefaultData();
   const profile = await getDefaultProfile();
 
   const today = startOfDay();
   const [
-    workouts,
     dailyLog,
     meals,
     exerciseOptions,
-    workoutNameRows,
     templates,
     progressWorkouts,
     dailyWeightLogs,
     bodyMeasurements,
   ] = await Promise.all([
-    prisma.workout.findMany({
-      where: { profileId: profile.id },
-      include: { exercises: { include: { sets: true } } },
-      orderBy: { date: "desc" },
-      take: 20,
-    }),
     prisma.dailyLog.findUnique({ where: { profileId_date: { profileId: profile.id, date: today } } }),
     prisma.meal.findMany({
       where: { date: today, profileId: profile.id },
@@ -49,12 +39,6 @@ export default async function GymPage() {
     prisma.exerciseCatalog.findMany({
       orderBy: [{ muscleGroup: "asc" }, { name: "asc" }],
       select: { name: true, muscleGroup: true, equipment: true },
-    }),
-    prisma.workout.findMany({
-      where: { profileId: profile.id },
-      distinct: ["name"],
-      select: { name: true },
-      orderBy: { name: "asc" },
     }),
     prisma.workoutTemplate.findMany({
       where: { profileId: profile.id },
@@ -87,6 +71,8 @@ export default async function GymPage() {
       orderBy: { date: "asc" },
     }),
   ]);
+  const workouts = [...progressWorkouts].reverse().slice(0, 20);
+  const workoutNameOptions = [...new Set(progressWorkouts.map((workout) => workout.name))].sort();
   const totals = calculateNutritionTotals(meals.flatMap((meal) => meal.foodItems));
   const bodyWeightByDate = new Map<string, number>();
 
@@ -114,7 +100,7 @@ export default async function GymPage() {
       <div className="grid gap-8">
         <WorkoutForm
           exerciseOptions={exerciseOptions}
-          workoutNameOptions={workoutNameRows.map((workout) => workout.name)}
+          workoutNameOptions={workoutNameOptions}
           templates={templates}
           draftScope={profile.id}
         />

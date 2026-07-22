@@ -1,4 +1,3 @@
-import { ensureDefaultData } from "@/app/actions";
 import { DashboardCompletion, DashboardStatusOverview, type DailyStatus, type StatusItem } from "@/components/dashboard/DashboardStatusOverview";
 import { TodoList } from "@/components/dashboard/TodoList";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -11,7 +10,6 @@ import { getDefaultProfile } from "@/lib/profile";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  await ensureDefaultData();
   const profile = await getDefaultProfile();
   const today = startOfDay();
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);

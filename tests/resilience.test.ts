@@ -22,6 +22,16 @@ test("long forms preserve drafts and pending controls prevent duplicate taps", a
   assert.match(await readFile("components/settings/AccountSettings.tsx", "utf8"), /clearAllDrafts/);
 });
 
+test("successful meal logging clears the prior entry while failed submissions remain editable", async () => {
+  const form = await readFile("components/meals/MealForm.tsx", "utf8");
+  const actions = await readFile("app/actions.ts", "utf8");
+  assert.match(form, /result\.status !== "success"/);
+  assert.match(form, /formRef\.current\?\.reset\(\)/);
+  assert.match(form, /setItems\(\[next\]\)/);
+  assert.match(form, /setEntryKind\("ITEM"\)/);
+  assert.match(actions, /Add at least one named item before saving/);
+});
+
 test("barcode scanning documents secure camera requirements and retains manual entry", async () => {
   const source = await readFile("components/meals/BarcodeLookup.tsx", "utf8");
   assert.match(source, /window\.isSecureContext/);

@@ -6,6 +6,10 @@ Notable project changes are recorded here. This project follows a simple private
 
 - Repository organization and documentation cleanup
 - Complete code-facing rename to Self-improvement
+- Goal-aware macro and micronutrient status colors
+- Meal logger reset and import selector alignment improvements
+- Consistent rounded workout chart axes
+- Faster authenticated page loads and scoped form refreshes
 
 ## 0.1.0 - 2026-07-20
 

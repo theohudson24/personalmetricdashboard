@@ -2,7 +2,7 @@ import type { UserSettings } from "@prisma/client";
 import { StatTile } from "@/components/shared/StatTile";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import type { NutritionTotals } from "@/lib/nutrition";
+import { nutritionGoalStatus, nutritionGoalTone, type NutritionTotals } from "@/lib/nutrition";
 
 export function MacroSummaryCard({
   totals,
@@ -26,25 +26,30 @@ export function MacroSummaryCard({
         description="Daily totals compared against your targets."
       />
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-5">
-        {rows.map(([label, value, goal, unit]) => (
-          <StatTile
-            key={label}
-            label={label}
-            value={`${Math.round(value)} ${unit}`}
-            helper={`Goal ${goal} ${unit}`}
-          />
-        ))}
+        {rows.map(([label, value, goal, unit]) => {
+          const tone = nutritionGoalTone(value, goal);
+          return <StatTile
+              key={label}
+              label={label}
+              value={`${Math.round(value)} ${unit}`}
+              helper={`Goal ${goal} ${unit} · ${nutritionGoalStatus(tone)}`}
+              tone={tone}
+            />;
+        })}
       </div>
       <div className="space-y-3">
-        {rows.map(([label, value, goal, unit]) => (
-          <ProgressBar
+        {rows.map(([label, value, goal, unit]) => {
+          const tone = nutritionGoalTone(value, goal);
+          return <ProgressBar
             key={label}
             value={value}
             max={goal}
             label={`${label}: ${Math.round(value)} / ${goal} ${unit}`}
-          />
-        ))}
+            tone={tone}
+          />;
+        })}
       </div>
+      <p className="mt-4 text-xs text-muted">Colors compare today&apos;s intake with your personal goals; they do not represent medical toxicity thresholds.</p>
     </Card>
   );
 }

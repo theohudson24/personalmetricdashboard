@@ -13,6 +13,7 @@ import type {
   WorkoutComparisonEntry,
   WorkoutVolumePoint,
 } from "@/lib/workouts";
+import { workoutChartScale } from "@/lib/workouts";
 
 type MetricKey =
   | "weightLifted"
@@ -163,15 +164,11 @@ function buildChartGeometry(
   padding: { left: number; right: number; top: number; bottom: number },
 ) {
   if (points.length === 0) {
-    return { path: "", coordinates: [], min: 0, max: 0 };
+    return { path: "", coordinates: [], min: 0, max: 5, ticks: [0, 5] };
   }
 
   const values = points.map((point) => point.value);
-  const rawMin = Math.min(...values);
-  const rawMax = Math.max(...values);
-  const spread = Math.max(rawMax - rawMin, 1);
-  const min = Math.max(0, rawMin - spread * 0.12);
-  const max = rawMax + spread * 0.12;
+  const { min, max, ticks } = workoutChartScale(values);
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -197,6 +194,7 @@ function buildChartGeometry(
     coordinates,
     min,
     max,
+    ticks,
   };
 }
 
@@ -1082,12 +1080,11 @@ export function GymProgressCards({
                     {selectedMetricOption.yAxisLabel}
                   </text>
 
-                  {[0, 1, 2, 3].map((line) => {
-                    const y = 24 + line * ((300 - 24 - 48) / 3);
-                    const value = chart.max - line * ((chart.max - chart.min) / 3);
+                  {[...chart.ticks].reverse().map((value) => {
+                    const y = 24 + ((chart.max - value) / Math.max(chart.max - chart.min, 1)) * (300 - 24 - 48);
 
                     return (
-                      <g key={line}>
+                      <g key={value}>
                         <line
                           x1="64"
                           x2="736"
@@ -1102,7 +1099,7 @@ export function GymProgressCards({
                           textAnchor="end"
                           className="fill-neutral-500 text-[11px]"
                         >
-                          {Math.round(value).toLocaleString()}
+                          {value.toLocaleString()}
                         </text>
                       </g>
                     );

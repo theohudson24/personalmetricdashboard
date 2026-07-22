@@ -22,6 +22,37 @@ export function estimatedOneRepMax(weight: number, reps: number) {
   return Math.round(weight * (1 + reps / 30));
 }
 
+export function workoutChartScale(values: number[]) {
+  const finiteValues = values.filter(Number.isFinite);
+  if (finiteValues.length === 0) return { min: 0, max: 5, step: 5, ticks: [0, 5] };
+
+  const rawMin = Math.min(...finiteValues);
+  const rawMax = Math.max(...finiteValues);
+  const candidates: number[] = [];
+  for (let magnitude = 1; magnitude <= 1_000_000; magnitude *= 10) {
+    candidates.push(5 * magnitude, 10 * magnitude);
+  }
+
+  const step = candidates.find((candidate) => {
+    const minimum = Math.max(0, Math.floor(rawMin / candidate) * candidate);
+    const maximum = Math.ceil(rawMax / candidate) * candidate;
+    return (maximum - minimum) / candidate <= 6;
+  }) ?? 1_000_000;
+
+  let min = Math.max(0, Math.floor(rawMin / step) * step);
+  let max = Math.ceil(rawMax / step) * step;
+  if (min === max) {
+    min = Math.max(0, min - step);
+    max += step;
+  }
+
+  const ticks = Array.from(
+    { length: Math.round((max - min) / step) + 1 },
+    (_, index) => min + index * step,
+  );
+  return { min, max, step, ticks };
+}
+
 export function exerciseProgress(workouts: WorkoutWithExercises[]) {
   const progress = new Map<
     string,
