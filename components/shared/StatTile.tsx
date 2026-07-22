@@ -11,14 +11,14 @@ export function StatTile({
 }) {
   return (
     <div
-      className={`group rounded-md border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:-translate-y-0.5 hover:shadow-soft ${
+      className={`group border-l-2 px-4 py-3 transition-colors ${
         tone === "missing"
-          ? "border-ember/50 bg-ember/12 hover:border-ember/70"
-          : "border-white/10 bg-gradient-to-br from-white/[0.09] to-white/[0.035] hover:border-core/40 hover:bg-white/[0.08]"
+          ? "border-ember bg-ember/[0.06]"
+          : "border-line bg-transparent hover:border-core"
       }`}
     >
       <p className="text-xs font-medium text-muted">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${tone === "missing" ? "text-ember" : "text-ink"}`}>
+      <p className={`mt-1 text-xl font-semibold tracking-[-0.025em] ${tone === "missing" ? "text-ember" : "text-ink"}`}>
         {value}
       </p>
       {helper ? <p className="mt-1 text-xs text-muted">{helper}</p> : null}

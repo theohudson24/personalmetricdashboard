@@ -188,7 +188,7 @@ export function WorkoutForm({
         <div className="mt-5">
           <h3 className="mb-3 text-sm font-semibold">Saved templates</h3>
           {templates.length === 0 ? (
-            <EmptyState message="No saved templates yet." />
+            <EmptyState title="No workout templates yet" message="Start a workout above and choose to save it as a template when you want to reuse the same structure." />
           ) : (
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {templates.map((template) => (
@@ -196,7 +196,7 @@ export function WorkoutForm({
                   key={template.id}
                   type="button"
                   onClick={() => startFromTemplate(template)}
-                  className="rounded-md border border-line bg-black/15 p-3 text-left transition hover:border-core/40 hover:bg-white/[0.06]"
+                  className="rounded-md border border-line bg-ink/[0.025] p-3 text-left transition hover:border-core/40 hover:bg-ink/[0.04]"
                 >
                   <span className="block text-sm font-medium">{template.name}</span>
                   <span className="mt-1 block text-xs text-muted">
@@ -259,7 +259,7 @@ export function WorkoutForm({
 
         <div className="space-y-4">
           {exercises.map((exercise, exerciseIndex) => (
-            <div key={exercise.id} className="rounded-md border border-line bg-black/10 p-3">
+            <div key={exercise.id} className="rounded-md border border-line bg-ink/[0.02] p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">Exercise {exerciseIndex + 1}</p>
                 <Button
@@ -326,7 +326,7 @@ export function WorkoutForm({
                       defaultValue={set.setType}
                       aria-label={`Set ${setIndex + 1} type`}
                       onChange={(event) => setExercises((current) => current.map((entry) => entry.id === exercise.id ? { ...entry, sets: entry.sets.map((row) => row.id === set.id ? { ...row, setType: event.target.value } : row) } : entry))}
-                      className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
+                      className="min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-ink transition focus:border-core"
                     >
                       <option value="WORKING">Working</option>
                       <option value="DROP_SET">Drop set</option>
@@ -353,7 +353,7 @@ export function WorkoutForm({
           ))}
         </div>
 
-        <div className="rounded-md border border-line bg-black/15 p-3">
+        <div className="rounded-md border border-line bg-ink/[0.025] p-3">
           <label className="flex items-center gap-2 text-sm font-medium">
             <input name="saveAsTemplate" type="checkbox" className="h-4 w-4" />
             Save this workout as a template

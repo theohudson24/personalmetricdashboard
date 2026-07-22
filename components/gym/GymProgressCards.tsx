@@ -556,11 +556,11 @@ export function GymProgressCards({
       />
 
       {!hasAnyData ? (
-        <EmptyState message="Progress data appears after workouts or body weight are logged." />
+        <EmptyState title="Build your first progress baseline" message="Log a workout or body-weight measurement. Your charts will begin with your own first record." />
       ) : (
         <div className="space-y-5">
           <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-            <div className="overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-[#0b100d] to-[#17221c] p-4 text-ink shadow-glow">
+            <div className="overflow-hidden rounded-product border border-line/70 bg-panel p-4 text-ink shadow-soft">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-growth">
@@ -568,8 +568,8 @@ export function GymProgressCards({
                   </p>
                   <h3 className="mt-1 text-xl font-semibold">Muscle focus map</h3>
                 </div>
-                <div className="rounded-md border border-white/10 bg-white/[0.06] px-3 py-2 text-right">
-                  <p className="text-xs text-white/50">Balance</p>
+                <div className="rounded-md border border-line/70 bg-ink/[0.04] px-3 py-2 text-right">
+                  <p className="text-xs text-muted">Balance</p>
                   <p className="text-lg font-semibold">{balanceScore}%</p>
                 </div>
               </div>
@@ -583,8 +583,8 @@ export function GymProgressCards({
                 >
                   <defs>
                     <linearGradient id="progressArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4db7a7" stopOpacity="0.34" />
-                      <stop offset="100%" stopColor="#4db7a7" stopOpacity="0.02" />
+                      <stop offset="0%" stopColor="rgb(var(--color-core))" stopOpacity="0.34" />
+                      <stop offset="100%" stopColor="rgb(var(--color-core))" stopOpacity="0.02" />
                     </linearGradient>
                   </defs>
                   <defs>
@@ -645,7 +645,7 @@ export function GymProgressCards({
               </div>
             </div>
 
-            <div className="rounded-lg border border-line bg-black/15 p-4">
+            <div className="rounded-lg border border-line bg-ink/[0.025] p-4">
               {selectedMuscle ? (
                 <div>
                   <div className="mb-4 flex items-start justify-between gap-4">
@@ -661,7 +661,7 @@ export function GymProgressCards({
                     <button
                       type="button"
                       onClick={() => setSelectedMuscle(null)}
-                      className="rounded-md border border-line bg-black/20 px-3 py-2 text-xs font-semibold text-muted transition hover:border-core/40 hover:text-ink"
+                      className="rounded-md border border-line bg-ink/[0.04] px-3 py-2 text-xs font-semibold text-muted transition hover:border-core/40 hover:text-ink"
                     >
                       Return to body summary
                     </button>
@@ -680,24 +680,24 @@ export function GymProgressCards({
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <Activity size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Volume</p>
                       <p className="mt-1 text-lg font-semibold">{formatValue(focusVolume, "lb")}</p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <ShieldCheck size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Share</p>
                       <p className="mt-1 text-lg font-semibold">{focusShare}%</p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <TrendingUp size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Rank</p>
                       <p className="mt-1 text-lg font-semibold">
                         {focusRank ? `#${focusRank}` : "--"}
                       </p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <Crosshair size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Exercises</p>
                       <p className="mt-1 text-lg font-semibold">{focusExerciseStats.length}</p>
@@ -705,7 +705,7 @@ export function GymProgressCards({
                   </div>
 
                   <div className="mt-5 grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <p className="text-sm font-semibold">Top movement</p>
                       {focusBestExercise ? (
                         <div className="mt-3 space-y-2 text-sm text-muted">
@@ -727,7 +727,7 @@ export function GymProgressCards({
                       )}
                     </div>
 
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <p className="text-sm font-semibold">Exercise breakdown</p>
                       <div className="mt-3 space-y-2">
                         {focusExerciseStats.length > 0 ? (
@@ -767,24 +767,24 @@ export function GymProgressCards({
                   </p>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <Activity size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Total volume</p>
                       <p className="mt-1 text-lg font-semibold">
                         {formatValue(totalMuscleVolume, "lb")}
                       </p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <ShieldCheck size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Balance</p>
                       <p className="mt-1 text-lg font-semibold">{balanceScore}%</p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <TrendingUp size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Top group</p>
                       <p className="mt-1 text-lg font-semibold">{topMuscle?.label ?? "--"}</p>
                     </div>
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <Crosshair size={16} className="mb-2 text-growth" />
                       <p className="text-xs text-muted">Improve next</p>
                       <p className="mt-1 text-lg font-semibold">{improvementTarget.label}</p>
@@ -792,7 +792,7 @@ export function GymProgressCards({
                   </div>
 
                   <div className="mt-5 grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <p className="text-sm font-semibold">Current muscle distribution</p>
                       <div className="mt-3 space-y-3">
                         {(muscleTotals.length > 0 ? muscleTotals : [{ label: "No muscle data", value: 0 }]).slice(0, 6).map((entry) => {
@@ -815,7 +815,7 @@ export function GymProgressCards({
                       </div>
                     </div>
 
-                    <div className="rounded-md border border-line bg-black/15 p-3">
+                    <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                       <p className="text-sm font-semibold">Suggestions</p>
                       <div className="mt-3 space-y-3 text-sm leading-6 text-muted">
                         <p>
@@ -839,7 +839,7 @@ export function GymProgressCards({
             </div>
           </div>
 
-          <div className="rounded-lg border border-line bg-black/15 p-4">
+          <div className="rounded-lg border border-line bg-ink/[0.025] p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-core">
@@ -858,7 +858,7 @@ export function GymProgressCards({
                   <select
                     value={selectedWorkoutComparison?.id ?? ""}
                     onChange={(event) => setSelectedWorkoutId(event.target.value)}
-                    className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
+                    className="min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-ink transition focus:border-core"
                   >
                     {workoutComparisons.map((workout) => (
                       <option key={workout.id} value={workout.id}>
@@ -871,18 +871,18 @@ export function GymProgressCards({
             </div>
 
             {!selectedWorkoutComparison ? (
-              <EmptyState message="Log or import workouts to compare repeated sessions." />
+              <EmptyState title="No comparable sessions yet" message="Log the same workout at least twice, or import your Strong history, to compare progression." />
             ) : (
               <div className="grid gap-4">
                 <div className="grid gap-3 md:grid-cols-4">
-                  <div className="rounded-md border border-line bg-black/15 p-3">
+                  <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                     <p className="text-xs text-muted">Selected workout</p>
                     <p className="mt-1 text-lg font-semibold">{selectedWorkoutComparison.name}</p>
                     <p className="mt-1 text-xs text-muted">
                       {formatShortDate(selectedWorkoutComparison.date)}
                     </p>
                   </div>
-                  <div className="rounded-md border border-line bg-black/15 p-3">
+                  <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                     <p className="text-xs text-muted">Total volume</p>
                     <p className="mt-1 text-lg font-semibold">
                       {formatValue(selectedWorkoutComparison.volume, "lb")}
@@ -891,7 +891,7 @@ export function GymProgressCards({
                       {formatDelta(selectedWorkoutComparison.volumeDelta)}
                     </p>
                   </div>
-                  <div className="rounded-md border border-line bg-black/15 p-3">
+                  <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                     <p className="text-xs text-muted">Volume change</p>
                     <p className="mt-1 text-lg font-semibold">
                       {selectedWorkoutComparison.volumeDeltaPercent === null
@@ -902,7 +902,7 @@ export function GymProgressCards({
                       Versus {selectedWorkoutComparison.previous?.label ?? "no prior matching workout"}
                     </p>
                   </div>
-                  <div className="rounded-md border border-line bg-black/15 p-3">
+                  <div className="rounded-md border border-line bg-ink/[0.025] p-3">
                     <p className="text-xs text-muted">Improved lifts</p>
                     <p className="mt-1 text-lg font-semibold">
                       {improvingExercises} / {selectedWorkoutComparison.exerciseComparisons.length}
@@ -922,7 +922,7 @@ export function GymProgressCards({
                       <div
                         key={exercise.name}
                         className={`rounded-md border p-3 ${
-                          liftImproved ? "border-core/40 bg-core/10" : "border-line bg-black/15"
+                          liftImproved ? "border-core/40 bg-core/10" : "border-line bg-ink/[0.025]"
                         }`}
                       >
                         <div className="mb-3 flex items-start justify-between gap-3">
@@ -983,7 +983,7 @@ export function GymProgressCards({
                 <select
                   value={selectedExercise}
                   onChange={(event) => setSelectedExercise(event.target.value)}
-                  className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
+                  className="min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-ink transition focus:border-core"
                 >
                   {exerciseNames.map((name) => (
                     <option key={name} value={name}>
@@ -1003,7 +1003,7 @@ export function GymProgressCards({
               <select
                 value={selectedMetric}
                 onChange={(event) => setSelectedMetric(event.target.value as MetricKey)}
-                className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
+                className="min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-ink transition focus:border-core"
               >
                 {metricOptions.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -1020,7 +1020,7 @@ export function GymProgressCards({
               <select
                 value={selectedPeriod}
                 onChange={(event) => setSelectedPeriod(event.target.value as PeriodKey)}
-                className="min-h-11 w-full rounded-md border border-line bg-black/20 px-3 text-sm text-ink transition focus:border-core"
+                className="min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-ink transition focus:border-core"
               >
                 {periodOptions.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -1032,7 +1032,7 @@ export function GymProgressCards({
           </div>
 
           {chartPoints.length === 0 ? (
-            <EmptyState message="No data matches this metric and time period." />
+            <EmptyState title="No data in this view" message="Choose another metric or time period, or add the corresponding measurement to begin tracking it." />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -1058,7 +1058,7 @@ export function GymProgressCards({
                 />
               </div>
 
-              <div className="overflow-hidden rounded-md border border-line bg-black/20">
+              <div className="overflow-hidden rounded-md border border-line bg-ink/[0.04]">
                 <svg
                   viewBox="0 0 760 300"
                   role="img"
@@ -1068,8 +1068,8 @@ export function GymProgressCards({
                 >
                   <defs>
                     <linearGradient id="workoutProgressArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4db7a7" stopOpacity="0.32" />
-                      <stop offset="100%" stopColor="#4db7a7" stopOpacity="0.02" />
+                      <stop offset="0%" stopColor="rgb(var(--color-core))" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="rgb(var(--color-core))" stopOpacity="0.02" />
                     </linearGradient>
                   </defs>
                   <text
@@ -1111,7 +1111,7 @@ export function GymProgressCards({
                   {selectedMetricOption.chartType === "line" && chartPoints.length > 1 ? (
                     <>
                       <path d={`${chart.path} L ${chart.coordinates.at(-1)?.x} 252 L ${chart.coordinates[0].x} 252 Z`} fill="url(#workoutProgressArea)" />
-                      <path d={chart.path} fill="none" stroke="#4db7a7" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d={chart.path} fill="none" stroke="rgb(var(--color-core))" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
                       {chart.coordinates.slice(1).map((coordinate, index) => {
                         const previous = chart.coordinates[index];
                         const change = coordinate.point.value - previous.point.value;
@@ -1155,7 +1155,7 @@ export function GymProgressCards({
                             cy={coordinate.y}
                             r={hoveredPointIndex === index ? "5.5" : "4"}
                             fill={coordinate.point.personalRecord ? "#a4cf6f" : "#111814"}
-                            stroke={coordinate.point.personalRecord ? "#d9f2b9" : "#4db7a7"}
+                            stroke={coordinate.point.personalRecord ? "rgb(var(--color-growth))" : "rgb(var(--color-core))"}
                             strokeWidth={coordinate.point.personalRecord ? "3" : "2"}
                             onMouseEnter={() => setHoveredPointIndex(index)}
                             onMouseLeave={() => setHoveredPointIndex(null)}

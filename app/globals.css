@@ -4,6 +4,19 @@
 
 :root {
   color-scheme: dark;
+  --color-ink: 238 240 244;
+  --color-paper: 17 19 23;
+  --color-panel: 24 27 32;
+  --color-line: 53 59 68;
+  --color-muted: 164 170 179;
+  --color-core: 105 146 194;
+  --color-growth: 130 174 108;
+  --color-focus: 126 157 194;
+  --color-pulse: 204 150 87;
+  --color-ember: 201 101 95;
+  --radius: 0.625rem;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18), 0 12px 32px rgba(0, 0, 0, 0.1);
+  --shadow-lift: 0 1px 2px rgba(0, 0, 0, 0.2), 0 18px 42px rgba(0, 0, 0, 0.16);
 }
 
 * {
@@ -13,11 +26,8 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 14% 10%, rgba(77, 183, 167, 0.16), transparent 30rem),
-    radial-gradient(circle at 82% 0%, rgba(224, 154, 85, 0.11), transparent 28rem),
-    linear-gradient(135deg, #0a0f0c 0%, #101713 48%, #141b17 100%);
-  color: #edf4ea;
+  background: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -41,11 +51,11 @@ a,
 input,
 select,
 textarea {
-  outline-color: #26685f;
+  outline-color: rgb(var(--color-core));
 }
 
 :focus-visible {
-  outline: 3px solid #74cfc2;
+  outline: 2px solid rgb(var(--color-core));
   outline-offset: 3px;
 }
 
@@ -59,100 +69,48 @@ textarea {
 }
 
 ::selection {
-  background: #4db7a7;
+  background: rgb(var(--color-core));
   color: #ffffff;
-}
-
-body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  background-image:
-    linear-gradient(rgba(237, 244, 234, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(237, 244, 234, 0.035) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: linear-gradient(to bottom, black, transparent 78%);
 }
 
 html.light {
   color-scheme: light;
+  --color-ink: 29 34 41;
+  --color-paper: 246 245 241;
+  --color-panel: 252 251 248;
+  --color-line: 210 214 220;
+  --color-muted: 96 104 114;
+  --color-core: 39 76 119;
+  --color-growth: 75 126 68;
+  --color-focus: 57 91 130;
+  --color-pulse: 160 104 46;
+  --color-ember: 170 69 64;
+  --shadow-soft: 0 1px 2px rgba(37, 40, 35, 0.04), 0 10px 28px rgba(37, 40, 35, 0.04);
+  --shadow-lift: 0 2px 4px rgba(37, 40, 35, 0.05), 0 18px 38px rgba(37, 40, 35, 0.08);
 }
 
 html.light body {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(38, 104, 95, 0.1), transparent 30rem),
-    radial-gradient(circle at 82% 0%, rgba(177, 105, 38, 0.08), transparent 28rem),
-    linear-gradient(135deg, #f7faf7 0%, #eef4ef 48%, #e7efe9 100%);
-  color: #17221b;
-}
-
-html.light body::before {
-  background-image:
-    linear-gradient(rgba(23, 34, 27, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(23, 34, 27, 0.045) 1px, transparent 1px);
+  background: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
 }
 
 /* Light mode is intentionally defined as a complete surface palette. Most of the
    application uses translucent utility classes that otherwise assume a dark canvas. */
-html.light .bg-paper { background-color: #fbfdfb !important; }
-html.light .text-ink { color: #17221b !important; }
-html.light .text-muted { color: #52645a !important; }
-html.light .text-core { color: #17675d !important; }
-html.light .text-growth { color: #4d751d !important; }
-html.light .text-focus { color: #315f9d !important; }
-html.light .text-pulse { color: #96551f !important; }
-html.light .text-ember { color: #a63737 !important; }
-html.light [class*="text-white"] { color: #33473b !important; }
-html.light [class*="fill-white"] { fill: #52645a !important; }
-html.light [class*="fill-neutral"] { fill: #5d6e64 !important; }
-
-html.light .border-line,
-html.light [class*="border-white"] { border-color: #c5d2c8 !important; }
-
-html.light [class*="bg-white/"],
-html.light [class*="bg-black/"] {
-  background-color: rgba(255, 255, 255, 0.82) !important;
-}
-
-html.light [class*="bg-[#0b100d]"],
-html.light [class*="bg-[#111814]"] {
-  background-color: #f8fbf8 !important;
-}
-
-html.light [class*="from-[#0b100d]"] {
-  --tw-gradient-from: #f8fbf8 var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgba(248, 251, 248, 0) var(--tw-gradient-to-position) !important;
-}
-
-html.light [class*="to-[#17221c]"] {
-  --tw-gradient-to: #e5eee7 var(--tw-gradient-to-position) !important;
-}
-
-html.light section[class*="shadow-soft"],
-html.light [class*="shadow-glow"] {
-  box-shadow: 0 14px 36px rgba(38, 68, 48, 0.1) !important;
-}
-
 html.light input,
 html.light select,
 html.light textarea {
-  border-color: #b8c8bc !important;
-  background-color: #ffffff !important;
-  color: #17221b !important;
+  background-color: rgb(var(--color-panel));
 }
 
 html.light input::placeholder,
 html.light textarea::placeholder { color: #718078 !important; }
 html.light option { background: #ffffff; color: #17221b; }
 
-html.light .bg-core { background-color: #318f82 !important; }
-html.light .bg-growth { background-color: #739e3d !important; }
-html.light .bg-pulse { background-color: #c27a35 !important; }
-html.light .bg-ember { background-color: #c54c4c !important; }
-html.light .border-core { border-color: #267f73 !important; }
-html.light button.bg-core,
-html.light a.bg-core { color: #ffffff !important; }
+html { scroll-behavior: smooth; }
 
-html.light svg { color: #33473b; }
+@layer components {
+  .page-stack { @apply grid gap-8; }
+  .section-stack { @apply grid gap-5; }
+  .eyebrow { @apply text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-core; }
+  .hairline { @apply border-line/80; }
+}

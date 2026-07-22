@@ -33,7 +33,7 @@ export function BodyMeasurementForm() {
             <Input name="legs" type="number" step="0.1" />
           </Field>
         </div>
-        <div className="rounded-md border border-dashed border-line bg-black/15 p-4 text-sm text-muted">
+        <div className="rounded-md border border-dashed border-line bg-ink/[0.025] p-4 text-sm text-muted">
           Progress photo upload placeholder
         </div>
         <Field label="Notes">

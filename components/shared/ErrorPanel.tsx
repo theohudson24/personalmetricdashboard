@@ -26,7 +26,7 @@ export function ErrorPanel({ error, reset, global = false }: { error: Error & { 
       <h1 className="mt-4 text-2xl font-semibold">{offline ? "You appear to be offline" : `We couldn't load ${task}`}</h1>
       <p className="mt-3 text-muted">{offline ? "This request could not reach the server. Reconnect to the internet, then try again." : "This appears to be an issue on our end. We know about this type of bug, and our development team is working hard to keep the application reliable."}</p>
       {error.digest ? <p className="mt-3 text-xs text-muted">Error reference: {error.digest}</p> : null}
-      <div className="mt-5 flex flex-wrap justify-center gap-3"><Button onClick={reset}><RefreshCw size={16}/><span className="ml-2">Try again</span></Button><Link href={reportUrl} className="inline-flex min-h-11 items-center rounded-md border border-line bg-white/[0.07] px-4 text-sm font-medium text-ink">Report this bug</Link><Link href="/" className="inline-flex min-h-11 items-center rounded-md px-4 text-sm text-muted">Return home</Link></div>
+      <div className="mt-5 flex flex-wrap justify-center gap-3"><Button onClick={reset}><RefreshCw size={16}/><span className="ml-2">Try again</span></Button><Link href={reportUrl} className="inline-flex min-h-11 items-center rounded-md border border-line bg-ink/[0.04] px-4 text-sm font-medium text-ink">Report this bug</Link><Link href="/" className="inline-flex min-h-11 items-center rounded-md px-4 text-sm text-muted">Return home</Link></div>
     </Card>
   </div>;
 }

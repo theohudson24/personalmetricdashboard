@@ -38,10 +38,10 @@ export default async function MealsPage() {
         title="Nutrition that powers the next level"
         description="Track intake, macros, micronutrients, and the daily targets that support adaptation."
       />
-      <div className="grid gap-5">
+      <div className="grid gap-8">
         <MacroSummaryCard totals={totals} settings={settings} />
         <MicronutrientGrid totals={totals} settings={settings} />
-        <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
           <MealForm draftScope={profile.id} />
           <div className="grid gap-5">
             <NutritionInsights insights={nutritionInsights(totals, settings)} />

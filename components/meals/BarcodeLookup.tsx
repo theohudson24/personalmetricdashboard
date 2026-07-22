@@ -49,7 +49,7 @@ export function BarcodeLookup({ onFound }: { onFound: (food: FoodSearchResult) =
 
   useEffect(() => () => controlsRef.current?.stop(), []);
 
-  return <div className="mb-4 rounded-md border border-line bg-black/15 p-3">
+  return <div className="mb-4 rounded-md border border-line bg-ink/[0.025] p-3">
     <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold">Barcode lookup</p><p className="text-xs text-muted">Scan on mobile or type the number on a computer.</p></div>
       <Button type="button" variant="secondary" onClick={scanning ? stopScan : startScan}>{scanning ? <X size={16}/> : <Camera size={16}/>}<span className="ml-2">{scanning ? "Stop camera" : "Scan barcode"}</span></Button></div>
     {scanning ? <video ref={videoRef} muted playsInline className="mt-3 max-h-64 w-full rounded-md bg-black object-cover" /> : null}

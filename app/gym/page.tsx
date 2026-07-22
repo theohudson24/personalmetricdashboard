@@ -111,7 +111,7 @@ export default async function GymPage() {
         title="Build strength with visible progression"
         description="Log sessions, inspect muscle balance, and turn training history into targeted next moves."
       />
-      <div className="grid gap-5">
+      <div className="grid gap-8">
         <WorkoutForm
           exerciseOptions={exerciseOptions}
           workoutNameOptions={workoutNameRows.map((workout) => workout.name)}
@@ -126,7 +126,7 @@ export default async function GymPage() {
           muscleGroupVolumeEntries={muscleGroupVolumeEntries(progressWorkouts)}
           workoutComparisons={workoutComparisonEntries(progressWorkouts)}
         />
-        <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-8 xl:grid-cols-[1.2fr_0.8fr]">
           <WorkoutHistoryList workouts={workouts} />
           <div className="grid gap-5">
             <TrainingInsights insights={trainingInsights(workouts, dailyLog, totals)} />
