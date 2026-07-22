@@ -57,12 +57,27 @@ export function WorkoutHistoryList({
         title="Workout history"
         description="Recent sessions with volume and exercise details."
       />
-      <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <label className="text-sm text-muted">Exercise or workout<input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleCount(5); }} placeholder="Bench press" className="mt-1 min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/></label>
-        <label className="text-sm text-muted">Source<select value={source} onChange={(event) => { setSource(event.target.value); setVisibleCount(5); }} className="mt-1 min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"><option value="all">All sources</option><option value="manual">Manual</option><option value="strong">Strong</option></select></label>
-        <label className="text-sm text-muted">From<input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setVisibleCount(5); }} className="mt-1 min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/></label>
-        <label className="text-sm text-muted">To<input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setVisibleCount(5); }} className="mt-1 min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/></label>
-        <label className="flex min-h-11 items-center gap-2 self-end rounded-md border border-line bg-ink/[0.04] px-3 text-sm text-muted"><input type="checkbox" checked={recordsOnly} onChange={(event) => { setRecordsOnly(event.target.checked); setVisibleCount(5); }} className="accent-core"/> Personal records only</label>
+      <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.25fr)_minmax(10rem,1fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(12rem,auto)] xl:items-end">
+        <label className="flex h-full flex-col text-sm text-muted">
+          <span className="mb-2 font-medium">Exercise or workout</span>
+          <input value={query} onChange={(event) => { setQuery(event.target.value); setVisibleCount(5); }} placeholder="Bench press" className="mt-auto min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/>
+        </label>
+        <label className="flex h-full flex-col text-sm text-muted">
+          <span className="mb-2 font-medium">Source</span>
+          <select value={source} onChange={(event) => { setSource(event.target.value); setVisibleCount(5); }} className="mt-auto min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"><option value="all">All sources</option><option value="manual">Manual</option><option value="strong">Strong</option></select>
+        </label>
+        <label className="flex h-full flex-col text-sm text-muted">
+          <span className="mb-2 font-medium">From</span>
+          <input type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setVisibleCount(5); }} className="mt-auto min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/>
+        </label>
+        <label className="flex h-full flex-col text-sm text-muted">
+          <span className="mb-2 font-medium">To</span>
+          <input type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setVisibleCount(5); }} className="mt-auto min-h-11 w-full rounded-md border border-line bg-ink/[0.04] px-3 text-ink"/>
+        </label>
+        <label className="flex min-h-11 items-center justify-center gap-2 self-end whitespace-nowrap rounded-md border border-line bg-ink/[0.04] px-4 text-sm font-medium text-muted">
+          <input type="checkbox" checked={recordsOnly} onChange={(event) => { setRecordsOnly(event.target.checked); setVisibleCount(5); }} className="h-4 w-4 shrink-0 accent-core"/>
+          <span>Personal records only</span>
+        </label>
       </div>
       <div className="space-y-3">
         {filteredWorkouts.length === 0 ? (
